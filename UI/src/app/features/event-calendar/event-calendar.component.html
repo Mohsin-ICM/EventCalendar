@@ -1,0 +1,78 @@
+<div class="container-fluid p-4">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h2 class="text-2xl font-semibold text-gray-900 mb-1">Event Calendar Demo</h2>
+      <p class="text-sm text-gray-500">
+        Create recurring events, split schedules, override an instance, and manage exceptions.
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="px-4 py-2 text-sm rounded-md border transition-colors"
+        style="background-color:white; color:#2362A3; border-color:#2362A3"
+        onmouseover="this.style.backgroundColor='#2362A3'; this.style.color='white'"
+        onmouseout="this.style.backgroundColor='white'; this.style.color='#2362A3'; this.style.borderColor='#2362A3'"
+        (click)="onCreateNewEvent()">
+        <i class="bi bi-plus-circle mr-1"></i>New Event
+      </button>
+      <a
+        class="px-4 py-2 text-sm rounded-md border transition-colors text-decoration-none"
+        style="background-color:white; color:#2362A3; border-color:#2362A3"
+        onmouseover="this.style.backgroundColor='#2362A3'; this.style.color='white'"
+        onmouseout="this.style.backgroundColor='white'; this.style.color='#2362A3'; this.style.borderColor='#2362A3'"
+        href="/shift-calendar">
+        Shift Calendar
+      </a>
+    </div>
+  </div>
+
+  <app-shared-calendar
+    [calendarViewType]="calendarViewType()"
+    [calendarEvents]="calendarEvents()"
+    [isLoadingOccurrences]="isLoadingOccurrences()"
+    [weekDays]="weekDays"
+    [calendarDays]="calendarDays()"
+    [weeklyDays]="weeklyDays()"
+    [timeSlots]="timeSlots"
+    [currentDate]="currentDate()"
+    [getCalendarTitle]="getCalendarTitle"
+    [isToday]="isToday"
+    [isCurrentMonth]="isCurrentMonth"
+    [isPastDate]="isPastDate"
+    [getEventsForDay]="getEventsForDay"
+    [formatTime]="formatTime"
+    [formatHour]="formatHour"
+    [formatDate]="formatDate"
+    [getEventTopPosition]="getEventTopPosition"
+    [getEventHeight]="getEventHeight"
+    [getEventLeftPosition]="getEventLeftPosition"
+    [getEventWidth]="getEventWidth"
+    [getEventLeftBorderColor]="getEventLeftBorderColor"
+    [getEventBackgroundColor]="getEventBackgroundColor"
+    [getProgramName]="getProgramName"
+    [getStaffCount]="getStaffCount"
+    [getAssignedHours]="getAssignedHours"
+    [getTargetHours]="getTargetHours"
+    (viewTypeChange)="onViewTypeChange($event)"
+    (previous)="onPrevious()"
+    (next)="onNext()"
+    (today)="onToday()"
+    (dayClick)="onDayClick($event)"
+    (eventClick)="onEventClick($event)">
+  </app-shared-calendar>
+
+  <app-event-form-modal
+    *ngIf="showEventForm()"
+    [data]="eventFormData()"
+    (save)="onEventFormSave($event)"
+    (cancel)="onEventFormCancel()">
+  </app-event-form-modal>
+
+  <app-occurrence-action-modal
+    *ngIf="showOccurrenceAction()"
+    [data]="occurrenceActionData()"
+    (action)="onOccurrenceAction($event)"
+    (cancel)="onOccurrenceActionCancel()">
+  </app-occurrence-action-modal>
+</div>

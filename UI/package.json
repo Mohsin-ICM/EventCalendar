@@ -1,0 +1,44 @@
+{
+  "name": "custom-calendar",
+  "version": "1.0.0",
+  "description": "Reusable calendar component extracted from StaffScheduler frontend",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/animations": "^18.0.0",
+    "@angular/common": "^18.0.0",
+    "@angular/compiler": "^18.0.0",
+    "@angular/core": "^18.0.0",
+    "@angular/forms": "^18.0.0",
+    "@angular/platform-browser": "^18.0.0",
+    "@angular/platform-browser-dynamic": "^18.0.0",
+    "@angular/router": "^18.0.0",
+    "@microsoft/signalr": "^8.0.0",
+    "@ngrx/effects": "^18.0.0",
+    "@ngrx/entity": "^18.0.0",
+    "@ngrx/store": "^18.0.0",
+    "@ngrx/store-devtools": "^18.0.0",
+    "lucide-angular": "^0.563.0",
+    "rrule": "^2.8.1",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.14.3"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^18.0.0",
+    "@angular/cli": "^18.0.0",
+    "@angular/compiler-cli": "^18.0.0",
+    "@types/node": "^20.0.0",
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "~5.4.0"
+  }
+}

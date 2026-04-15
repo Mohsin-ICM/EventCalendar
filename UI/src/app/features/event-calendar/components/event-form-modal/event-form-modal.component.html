@@ -1,0 +1,145 @@
+<!-- Event Form Modal — matches icm-create-popup theme -->
+<div class="fixed inset-0 flex items-center justify-center overflow-y-auto px-2 py-3 sm:px-4 sm:py-6"
+     style="z-index: 2000;">
+  <div class="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-200"
+       (click)="onCancel()"></div>
+
+  <div class="relative bg-white rounded-lg shadow-xl w-full mx-auto transform transition-all duration-200 animate-zoom-fade-in max-w-3xl max-h-[92vh] overflow-hidden">
+
+    <!-- Header -->
+    <div class="flex items-start justify-between px-3 py-2 sm:px-6 sm:py-3 border-b border-gray-200 bg-[#EFF5FF]">
+      <div class="flex items-center gap-2 sm:gap-3">
+        <i class="bi bi-calendar-plus text-blue-500 text-base sm:text-xl"></i>
+        <div>
+          <h3 class="text-lg sm:text-xl text-gray-900 tracking-tight py-1">{{ modalTitle }}</h3>
+          <p class="text-xs text-gray-500 tracking-tight">Define schedule and recurrence for this event</p>
+        </div>
+      </div>
+      <button type="button" (click)="onCancel()"
+              class="text-gray-500 hover:text-gray-700 transition-colors p-1 -mr-1 mt-1">
+        <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Body: 2-column layout -->
+    <div class="flex flex-col md:flex-row overflow-y-auto max-h-[calc(92vh-58px)]">
+
+      <!-- Left: form -->
+      <div class="flex-1 px-3 py-4 sm:px-6 sm:py-5 border-r border-gray-100">
+
+        <!-- Title -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">
+            Event Title <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            [formControl]="titleControl"
+            placeholder="e.g., Team Standup"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            [class.border-red-500]="titleControl.invalid && titleControl.touched">
+          <p class="mt-1 text-xs text-red-600" *ngIf="titleControl.invalid && titleControl.touched">
+            Event title is required
+          </p>
+        </div>
+
+        <!-- Color picker -->
+        <div class="mb-5">
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Event Color</label>
+          <div class="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              *ngFor="let c of colorPalette"
+              (click)="colorControl.setValue(c)"
+              class="w-7 h-7 rounded-full border-2 transition-all"
+              [style.background-color]="c"
+              [class.border-gray-800]="colorControl.value === c"
+              [class.border-transparent]="colorControl.value !== c"
+              [class.scale-110]="colorControl.value === c">
+            </button>
+          </div>
+        </div>
+
+        <!-- ScheduleDefinition component -->
+        <div class="border-t border-gray-100 pt-4">
+          <p class="text-sm font-medium text-gray-700 mb-3 flex items-center gap-1.5">
+            <i class="bi bi-arrow-repeat text-blue-500"></i>
+            Schedule & Recurrence
+          </p>
+          <app-schedule-definition
+            [value]="initialDefinition"
+            [showPreview]="false"
+            (valueChange)="onDefinitionChange($event)"
+            (validChange)="onValidChange($event)">
+          </app-schedule-definition>
+        </div>
+
+      </div>
+
+      <!-- Right: occurrence preview panel -->
+      <div class="w-full md:w-64 px-3 py-4 sm:px-4 sm:py-5 bg-gray-50 flex-shrink-0">
+        <p class="text-sm font-medium text-gray-700 mb-3 flex items-center gap-1.5">
+          <i class="bi bi-calendar3 text-blue-500"></i>
+          Preview
+        </p>
+
+        <div *ngIf="previewOccurrences().length > 0; else noPreview" class="space-y-1.5">
+          <div
+            *ngFor="let occ of previewOccurrences(); let i = index"
+            class="flex items-center gap-2 px-2.5 py-1.5 bg-white rounded-md border border-gray-200 text-xs text-gray-700">
+            <span
+              class="w-2 h-2 rounded-full flex-shrink-0"
+              [style.background-color]="colorControl.value || '#3b82f6'"></span>
+            {{ formatOcc(occ) }}
+          </div>
+          <p class="text-xs text-gray-400 mt-2 px-1" *ngIf="currentDefinition()">
+            <i class="bi bi-info-circle mr-1"></i>
+            Showing up to 8 occurrences
+          </p>
+        </div>
+
+        <ng-template #noPreview>
+          <div class="text-center py-8 text-gray-400">
+            <i class="bi bi-calendar3 text-2xl mb-2 block"></i>
+            <p class="text-xs">Set a recurring frequency<br>to preview occurrences</p>
+          </div>
+        </ng-template>
+
+        <!-- RRULE badge -->
+        <div *ngIf="currentDefinition()?.rrule" class="mt-4 pt-4 border-t border-gray-200">
+          <p class="text-xs text-gray-500 mb-1">RRULE</p>
+          <code class="text-xs font-mono text-blue-600 break-all bg-blue-50 px-2 py-1 rounded block">
+            {{ currentDefinition()?.rrule }}
+          </code>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 justify-end px-3 py-3 sm:px-6 border-t border-gray-200 bg-white">
+      <button
+        type="button"
+        (click)="onCancel()"
+        class="px-4 py-2 text-sm rounded-md border transition-colors w-full sm:w-auto"
+        style="background-color:white; color:#E7000B; border-color:#E7000B"
+        onmouseover="this.style.backgroundColor='#E7000B'; this.style.color='white'"
+        onmouseout="this.style.backgroundColor='white'; this.style.color='#E7000B'; this.style.borderColor='#E7000B'">
+        <i class="bi bi-x-circle mr-1"></i>Cancel
+      </button>
+      <button
+        type="button"
+        (click)="onSave()"
+        [disabled]="titleControl.invalid || !currentDefinition()"
+        class="px-4 py-2 text-sm rounded-md border transition-colors w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+        style="background-color:white; color:#2362A3; border-color:#2362A3"
+        onmouseover="this.style.backgroundColor='#2362A3'; this.style.color='white'"
+        onmouseout="this.style.backgroundColor='white'; this.style.color='#2362A3'; this.style.borderColor='#2362A3'">
+        <i class="bi bi-check-circle mr-1"></i>{{ isEditMode ? 'Save Changes' : 'Create Event' }}
+      </button>
+    </div>
+
+  </div>
+</div>

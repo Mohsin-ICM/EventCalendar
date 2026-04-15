@@ -1,0 +1,426 @@
+<div *ngIf="visible"
+     class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-2 py-3 sm:px-4 sm:py-6"
+     style="z-index: 2000;"
+     [class.is-closing]="isClosing">
+  <div class="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-200"></div>
+
+  <div class="relative bg-white rounded-lg shadow-xl w-full mx-auto transform transition-all duration-200 animate-zoom-fade-in max-w-xl max-h-[92vh] sm:max-h-[90vh] overflow-hidden"
+       [ngClass]="panelClass">
+    <div class="flex items-start justify-between px-3 py-2 sm:px-6 sm:py-3 border-b border-gray-200 bg-[#EFF5FF]">
+      <div class="flex items-start ">
+	        <i *ngIf="icon" [class]="icon" class="text-blue-500 mr-2 sm:mr-3 text-base sm:text-xl py-2 "></i>
+	        <div>
+	          <h3 class="text-xl text-gray-900 mb-0.5 sm:mb-0.5 tracking-tight py-2 ">{{ header }}</h3>
+	          
+	          <p class="text-xs sm:text-sm text-gray-500 mt-0.5 tracking-tight" *ngIf="subHeader">{{ subHeader }}</p>
+	        </div>
+	      </div>
+      <button
+        *ngIf="showCloseButton"
+        type="button"
+        (click)="close()"
+        class="text-gray-500 hover:text-gray-700 transition-colors duration-200 p-1 -mr-1">
+        <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="px-3 py-3 sm:px-6 sm:py-6 overflow-y-auto max-h-[calc(92vh-52px)] sm:max-h-[calc(90vh-56px)]" *ngIf="useDefaultForm; else customCreateContent">
+      <form [formGroup]="createForm" (ngSubmit)="submit()">
+        <div class="mb-4" *ngIf="showName">
+          <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2 tracking-tight">Shift Name <span class="text-red-500">*</span></label>
+          <input
+            type="text"
+            class="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            formControlName="name"
+            placeholder="e.g., Morning Shift"
+            [class.border-red-500]="createForm.get('name')?.invalid && createForm.get('name')?.touched">
+          <p class="mt-1 text-xs sm:text-sm text-red-600 tracking-tight" *ngIf="createForm.get('name')?.invalid && createForm.get('name')?.touched">
+            Shift name is required
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-4" *ngIf="showStartTime || showEndTime">
+          <div *ngIf="showStartTime">
+            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2 tracking-tight">Start Time <span class="text-red-500">*</span></label>
+            <input
+              type="time"
+              class="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              formControlName="startTime"
+              [class.border-red-500]="createForm.get('startTime')?.invalid && createForm.get('startTime')?.touched">
+            <p class="mt-1 text-xs sm:text-sm text-red-600 tracking-tight" *ngIf="createForm.get('startTime')?.invalid && createForm.get('startTime')?.touched">
+              Start time is required
+            </p>
+          </div>
+          <div *ngIf="showEndTime">
+            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2 tracking-tight">End Time <span class="text-red-500">*</span></label>
+            <input
+              type="time"
+              class="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              formControlName="endTime">
+          </div>
+        </div>
+
+        <div class="mb-6" *ngIf="showTargetHours">
+          <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-0 tracking-tight">Target # of Hours <span class="text-red-500">*</span></label>
+          <input
+            type="number"
+            class="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            formControlName="targetHours"
+            placeholder="8"
+            min="0.5"
+            step="0.5"
+            [class.border-red-500]="createForm.get('targetHours')?.invalid && createForm.get('targetHours')?.touched">
+          <p class="mt-1 text-xs sm:text-sm text-gray-500 tracking-tight">Enter target number of hours for this shift</p>
+          <p class="mt-1 text-xs sm:text-sm text-red-600 tracking-tight" *ngIf="createForm.get('targetHours')?.invalid && createForm.get('targetHours')?.touched">
+            Target hours is required and must be greater than 0
+          </p>
+        </div>
+
+        <div class="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 justify-end py-2">
+          <button type="button" class="px-3 py-2 text-sm rounded-md transition-colors w-full sm:w-auto border tracking-tight" style="background-color: white; color: #E7000B; border-color: #E7000B;" onmouseover="this.style.backgroundColor='#E7000B'; this.style.color='white'; this.style.borderColor='#E7000B'" onmouseout="this.style.backgroundColor='white'; this.style.color='#E7000B'; this.style.borderColor='#d1d5db'" (click)="close()">
+            <i class="bi bi-x-circle mr-1"></i>Cancel
+          </button>
+          <button type="submit" class="px-3 py-2 text-sm rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto border border-gray-300 "  [disabled]="createForm.invalid || isSaving" style="background-color: white; color: #2362A3; border-color: #2362A3;" onmouseover="this.style.backgroundColor='#2362A3'; this.style.color='white'; this.style.borderColor='#2362A3'" onmouseout="this.style.backgroundColor='white', this.style.color= '#2362A3';">
+            <i class="bi bi-check-circle mr-1" *ngIf="!isSaving"></i>
+            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 inline" style="color: currentColor;" *ngIf="isSaving" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            {{ isSaving ? 'Saving...' : 'Create Shift' }}
+          </button>
+        </div>
+      </form>
+    </div>
+    <ng-template #customCreateContent>
+      <div class="px-3 py-2 sm:px-6 sm:py-6 overflow-y-auto max-h-[calc(92vh-52px)] sm:max-h-[calc(90vh-56px)] icm-create-schedule-form" *ngIf="useScheduleForm && scheduleForm; else transcludedContent">
+        <form [formGroup]="scheduleForm">
+          <!-- Shift Details card -->
+          <div *ngIf="draggedShift || dropDate" class="bg[hsl(210deg 15% 96% / 50%)] rounded-lg border bg-sky-50/70 p-3 shadow-md sm:p-6 mb-4">
+            <div class="grid grid-cols-3 gap-4">
+              <div class="space-y-1">
+                <div class="text-md text-gray-500 tracking-tight">Shift Name</div>
+                <div class="text-base  text-gray-900">{{ draggedShift?.name || '—' }}</div>
+              </div>
+              <div class="space-y-1">
+                <div class="text-md text-gray-500 tracking-tight">Time</div>
+                <div class="text-base  text-gray-900">
+                  <ng-container *ngIf="draggedShift?.startTime && draggedShift?.endTime; else noTime">
+                    {{ draggedShift.startTime | timeFormat }} - {{ draggedShift.endTime | timeFormat }}
+                  </ng-container>
+                  <ng-template #noTime>—</ng-template>
+                </div>
+              </div>
+              <div class="space-y-1">
+                <div class="text-md text-gray-500 tracking-tight">Date</div>
+                <div class="text-base  text-gray-900">{{ dropDate ? (dropDate | date:'MM/dd/yyyy') : '—' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Program Name + Target Hours row -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label for="programId" class="block text-sm font-medium text-gray-700 mb-1.5">Program Name <span class="text-red-500">*</span></label>
+              <icm-dropdown
+                [programs]="programs"
+                [selectedProgramId]="scheduleForm.get('programId')?.value"
+                (selectedProgramIdChange)="onScheduleProgramChange.emit($event)"
+                placeholder="Select a program"
+                [multiple]="false"
+                [valueField]="'id'"
+                [invalid]="!!(scheduleForm.get('programId')?.invalid && (scheduleForm.get('programId')?.touched || scheduleForm.touched))"
+                [disabled]="!canModifyScheduleForm">
+              </icm-dropdown>
+              <p class="mt-1 text-xs sm:text-sm text-red-600 tracking-tight" *ngIf="scheduleForm.get('programId')?.invalid && (scheduleForm.get('programId')?.touched || scheduleForm.touched)">
+                Program is required
+              </p>
+              <div *ngIf="!canModifyScheduleForm" class="mt-1 text-xs text-gray-500 tracking-tight">
+                <i class="bi bi-lock"></i> No permission to change program
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Target Hours <span class="text-red-500">*</span></label>
+              <input
+                type="number"
+                class="icm-input w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                formControlName="targetHours"
+                placeholder="7.0"
+                min="0.5"
+                step="0.5"
+                [disabled]="!canModifyScheduleForm"
+                [class.border-red-500]="scheduleForm.get('targetHours')?.invalid && scheduleForm.get('targetHours')?.touched">
+              <p class="mt-1 text-xs sm:text-sm text-red-600 tracking-tight" *ngIf="scheduleForm.get('targetHours')?.invalid && scheduleForm.get('targetHours')?.touched">
+                Target hours is required and must be greater than 0
+              </p>
+            </div>
+          </div>
+
+          <!-- Frequency of Schedule + Repeat Until row -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div *ngIf="!isEditingScheduleInModal || selectedSchedule?.status?.toLowerCase() === 'draft'">
+              <label for="frequency" class="block text-sm font-medium text-gray-700 mb-1.5">Frequency of Schedule <span class="text-red-500">*</span></label>
+              <select
+                class="icm-select w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                formControlName="frequency"
+                [disabled]="!canModifyScheduleForm"
+                (change)="onFrequencyChange($event)">
+                <option value="" disabled>Select frequency</option>
+                <option value="none">Does not repeat</option>
+                  <option value="daily">{{ dailyFrequencyLabel }}</option>
+                  <option value="weekly">{{ weeklyFrequencyLabel }}</option>
+                  <option value="monthly">{{ monthlyFrequencyLabel }}</option>
+                  <option value="annually">{{ annualFrequencyLabel }}</option>
+                  <option value="weekdays">Every weekday (Monday to Friday)</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <div *ngIf="!canModifyScheduleForm" class="mt-1 text-xs text-gray-500">
+                  <i class="bi bi-lock"></i> No permission to change frequency
+                </div>
+            </div>
+
+            <div
+              *ngIf="showRepeatUntilInput"
+              [class.md:col-span-2]="isEditingScheduleInModal && selectedSchedule?.status?.toLowerCase() === 'published'">
+              <label for="repeatUntil" class="block text-sm font-medium text-gray-700 mb-1.5">Repeat until <span class="text-red-500">*</span></label>
+              <input
+                id="repeatUntil"
+                type="date"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                formControlName="repeatUntil"
+                [min]="getMinRepeatUntilDate?.()"
+                [disabled]="!canModifyScheduleForm"
+                required>
+              <p class="mt-1 text-xs text-gray-500" *ngIf="scheduleForm.get('repeatUntil')?.value">
+                Selected: {{ scheduleForm.get('repeatUntil')?.value | date:'MM/dd/yyyy' }}
+              </p>
+              <p class="mt-1 text-xs text-gray-500" *ngIf="dropDate && scheduleForm.get('frequency')?.value !== 'none'">
+                End date must be after {{ dropDate | date:'MM/dd/yyyy' }}
+              </p>
+              <div *ngIf="!canModifyScheduleForm" class="mt-1 text-xs text-gray-500">
+                <i class="bi bi-lock"></i> No permission to change date
+              </div>
+            </div>
+            <div
+              *ngIf="showCustomRepeatUntilDisplay"
+              [class.md:col-span-2]="isEditingScheduleInModal && selectedSchedule?.status?.toLowerCase() === 'published'">
+              <label for="customRepeatUntil" class="block text-sm font-medium text-gray-700 mb-1.5">Repeat until <span class="text-red-500">*</span></label>
+              <input
+                id="customRepeatUntil"
+                type="text"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                [value]="customEndsSummary"
+                readonly
+                disabled>
+            </div>
+            <div
+              *ngIf="!showRepeatUntilInput && !showCustomRepeatUntilDisplay && customEndsSummary"
+              class="flex items-end"
+              [class.md:col-span-2]="isEditingScheduleInModal && selectedSchedule?.status?.toLowerCase() === 'published'">
+              <p class="text-xs text-gray-500">{{ customEndsSummary }}</p>
+            </div>
+          </div>
+
+          <div
+            class="flex items-center text-xs text-slate-500 mt-2 pt-2"
+            *ngIf="isEditingScheduleInModal && (selectedSchedule?.updatedOn || getUpdatedByInfo?.(selectedSchedule))">
+            <i class="bi bi-person-check mr-2 text-slate-400"></i>
+            <span *ngIf="selectedSchedule?.updatedOn; else createPopupLegacyUpdatedByInfo">
+              {{ selectedSchedule.updatedOn | icmDateTime:'dateTimeWithDescription':getUpdatedByNameForSchedule(selectedSchedule) }}
+            </span>
+            <ng-template #createPopupLegacyUpdatedByInfo>
+              <span>{{ getUpdatedByInfo?.(selectedSchedule) }}</span>
+            </ng-template>
+          </div>
+
+          <div class="icm-create-schedule-actions flex justify-end gap-3 mt-2 py-2">
+            <button
+              type="button"
+              class="icm-popup-cancel-btn px-4 py-2 text-sm font-medium rounded-md transition-colors"
+              (click)="close()">
+              Cancel
+            </button>
+
+            <button
+              *ngIf="!isEditingScheduleInModal"
+              type="button"
+              class="icm-create-btn px-4 py-2 text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              [class.opacity-50]="scheduleForm.invalid"
+              [class.cursor-not-allowed]="scheduleForm.invalid"
+              [attr.aria-disabled]="scheduleForm.invalid"
+              [disabled]="isCreatingSchedule || !canCreateSchedules"
+              (click)="scheduleForm.invalid ? scheduleForm.markAllAsTouched() : onCreateSchedule.emit()">
+              {{ isCreatingSchedule ? 'Creating...' : 'Create' }}
+            </button>
+
+            <button
+              *ngIf="isEditingScheduleInModal && selectedSchedule?.status?.toLowerCase() === 'published'"
+              type="button"
+              class="px-3 py-2 text-sm font-medium text-slate-700 bg-[#2A6DA3] text-white border border-transparent rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              [disabled]="isCreatingSchedule || scheduleForm.invalid || !hasScheduleFormChanges?.() || !canEditSchedules"
+              (click)="onSaveAsDraft.emit()">
+              <i class="bi bi-file-earmark-plus mr-2"></i>
+              {{ isCreatingSchedule ? 'Saving...' : 'Save' }}
+            </button>
+
+            <button
+              *ngIf="isEditingScheduleInModal && selectedSchedule?.status?.toLowerCase() !== 'published'"
+              type="button"
+              class="px-3 py-2 text-sm font-medium text-slate-700 bg-[#EEF2F6] border border-transparent rounded-md hover:bg-[#E2E8F0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              [disabled]="isCreatingSchedule || scheduleForm.invalid || !hasScheduleFormChanges?.() || !canEditSchedules"
+              (click)="onSaveAsDraft.emit()">
+              <i class="bi bi-file-earmark-plus me-1"></i>
+              {{ isCreatingSchedule ? 'Saving...' : 'Save' }}
+            </button>
+          </div>
+        </form>
+      </div>
+      <ng-template #transcludedContent>
+        <div class="px-3 py-3 sm:px-6 sm:py-6 overflow-y-auto max-h-[calc(92vh-52px)] sm:max-h-[calc(90vh-56px)]">
+          <ng-content></ng-content>
+        </div>
+      </ng-template>
+    </ng-template>
+  </div>
+</div>
+
+<!-- Custom Recurrence Modal -->
+<div *ngIf="showCustomRecurrenceModal" 
+     class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-2 py-3 sm:px-4 sm:py-6"
+     style="z-index: 3000;">
+  <div class="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-200" (click)="closeCustomRecurrenceModal()"></div>
+  
+  <div class="relative bg-white rounded-lg shadow-xl w-full mx-auto transform transition-all duration-200 animate-zoom-fade-in max-w-sm">
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <h3 class="text-lg font-semibold text-gray-900">Custom Recurrence</h3>
+      <button 
+        type="button" 
+        (click)="closeCustomRecurrenceModal()"
+        class="text-gray-400 hover:text-gray-500 transition-colors duration-200 p-1 -mr-1">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+    
+    <!-- Content -->
+    <div class="px-6 py-4">
+      <form [formGroup]="customRecurrenceForm">
+        <!-- Repeat Every Section -->
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Repeat every</label>
+          <div class="flex items-center gap-2">
+            <input 
+              type="number" 
+              class="w-16 px-2 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              formControlName="repeatInterval"
+              min="1"
+              value="1">
+            <select 
+              class="w-24 px-2 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              formControlName="repeatFrequency">
+              <option value="day">day</option>
+              <option value="week" selected>week</option>
+              <option value="month">month</option>
+              <option value="year">year</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Monthly Repeat On Section -->
+        <div class="mb-6" *ngIf="customRecurrenceForm.get('repeatFrequency')?.value === 'month'">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Repeat on</label>
+          <select 
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            formControlName="monthlyRepeatOption">
+            <option *ngFor="let option of monthlyRepeatOptions" [value]="option.value">{{ option.label }}</option>
+          </select>
+        </div>
+        
+        <!-- Repeat On Section -->
+        <div class="mb-6" *ngIf="customRecurrenceForm.get('repeatFrequency')?.value === 'week'">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Repeat on</label>
+          <div class="flex gap-2">
+            <button 
+              type="button"
+              *ngFor="let day of weekDays; let i = index"
+              (click)="toggleCustomWeekDay(i)"
+              [class]="isCustomWeekDaySelected(i) ? 'w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium hover:bg-blue-700 transition-colors' : 'w-10 h-10 bg-gray-100 text-gray-700 rounded-full flex items-center justify-center text-sm font-medium hover:bg-gray-200 transition-colors'">
+              {{ day }}
+            </button>
+          </div>
+        </div>
+        
+        <!-- Ends Section -->
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Ends</label>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <input 
+                type="radio" 
+                name="endOption" 
+                value="never"
+                class="mr-2"
+                formControlName="endOption"
+                checked>
+              <span class="text-sm text-gray-700">Never</span>
+            </label>
+            
+            <label class="flex items-center">
+              <input 
+                type="radio" 
+                name="endOption" 
+                value="on"
+                class="mr-2"
+                formControlName="endOption">
+              <span class="text-sm text-gray-700 mr-2">On</span>
+              <input 
+                type="date" 
+                class="w-32 px-2 py-1 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                formControlName="endDate"
+                placeholder="Select date"
+                [disabled]="customRecurrenceForm.get('endOption')?.value !== 'on'">
+            </label>
+            
+            <label class="flex items-center">
+              <input 
+                type="radio" 
+                name="endOption" 
+                value="after"
+                class="mr-2"
+                formControlName="endOption">
+              <span class="text-sm text-gray-700 mr-2">After</span>
+              <input 
+                type="number" 
+                class="w-14 px-2 py-1 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                formControlName="occurrences"
+                value="10"
+                min="1"
+                [disabled]="customRecurrenceForm.get('endOption')?.value !== 'after'">
+              <span class="text-sm text-gray-700 ml-2">occurrences</span>
+            </label>
+          </div>
+        </div>
+      </form>
+    </div>
+    
+    <!-- Footer -->
+    <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
+      <button 
+        type="button" 
+        (click)="closeCustomRecurrenceModal()"
+        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+        Cancel
+      </button>
+      <button 
+        type="button" 
+        (click)="saveCustomRecurrence()"
+        class="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 transition-colors">
+        Done
+      </button>
+    </div>
+  </div>
+</div>

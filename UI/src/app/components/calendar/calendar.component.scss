@@ -1,0 +1,31 @@
+// Calendar component styles
+// Only styles for modals and popups that remain in the parent component
+// All calendar rendering styles are in shared-calendar.component.scss
+
+// Event popup styles (for the modal that remains in parent component)
+.event-popup {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  max-width: 320px;
+  z-index: 2000;
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .btn-close {
+    font-size: 0.75rem;
+  }
+}
+
+// Responsive adjustments for event popup
+@media (max-width: 768px) {
+  .event-popup {
+    max-width: calc(100vw - 20px);
+    left: 10px !important;
+    right: 10px;
+    transform: translateY(10px);
+  }
+}

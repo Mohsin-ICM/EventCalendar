@@ -1,0 +1,10 @@
+bin/
+obj/
+.vs/
+.idea/
+.vscode/
+TestResults/
+artifacts/
+UI/node_modules/
+UI/.angular/
+UI/dist/

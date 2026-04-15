@@ -1,0 +1,73 @@
+/* Zoom-fade-in animation */
+@keyframes zoom-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes zoom-fade-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.icm-create-popup {
+  animation: zoom-fade-in 0.3s ease-out;
+}
+
+.fixed.inset-0 {
+  z-index: 9999;
+}
+
+.fixed.inset-0.is-closing .relative {
+  animation: zoom-fade-out 0.2s ease-in forwards;
+}
+
+/* Create Schedule popup – match design image */
+.icm-create-schedule-form .icm-schedule-summary-card {
+  background-color: #f3f4f6;
+  border: none;
+}
+
+.icm-create-schedule-form .icm-create-schedule-actions {
+  border-top: 1px solid #e5e7eb;
+}
+
+.icm-create-schedule-form .icm-popup-cancel-btn {
+  background-color: #ffffff;
+  color: #e7000b;
+  border: 1px solid #e7000b;
+}
+
+.icm-create-schedule-form .icm-popup-cancel-btn:hover:not(:disabled) {
+  background-color: #e7000b;
+  color: #ffffff;
+  border-color: #e7000b;
+}
+
+.icm-create-schedule-form .icm-create-btn {
+  background-color: #ffffff;
+  color: #2362a3;
+  border: 1px solid #2362a3;
+}
+
+.icm-create-schedule-form .icm-create-btn:hover:not(:disabled) {
+  background-color: #2362A3;
+  color: #ffffff;
+  border-color: #2362a3;
+}
+
+.icm-create-schedule-form .icm-input,
+.icm-create-schedule-form .icm-select {
+  border-color: #d1d5db;
+}

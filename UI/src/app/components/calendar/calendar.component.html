@@ -1,0 +1,273 @@
+<div class="flex flex-col lg:flex-row gap-4 items-stretch">
+  <!-- Shifts sidebar (drag onto calendar) -->
+  <aside class="w-full lg:w-72 shrink-0 border border-gray-200 rounded-lg bg-white shadow-sm p-3 max-h-[70vh] overflow-y-auto">
+    <h3 class="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
+      <i class="bi bi-briefcase"></i> Shifts
+    </h3>
+    <p class="text-xs text-gray-500 mb-3">Drag a shift onto a day to create a schedule.</p>
+    <div *ngIf="!shifts?.length" class="text-sm text-gray-400">No shifts loaded.</div>
+    <div
+      *ngFor="let shift of shifts"
+      class="mb-2 p-3 rounded-lg border border-slate-200 bg-slate-50 cursor-grab active:cursor-grabbing hover:bg-slate-100 transition-colors"
+      draggable="true"
+      (dragstart)="onShiftDragStart($event, shift)"
+      (dragend)="onShiftDragEnd($event)"
+    >
+      <div class="font-medium text-gray-900 text-sm">{{ shift.name }}</div>
+      <div class="text-xs text-gray-500 mt-1" *ngIf="shift.startTime && shift.endTime">
+        {{ formatTimeToAMPM(shift.startTime) }} – {{ formatTimeToAMPM(shift.endTime) }}
+      </div>
+    </div>
+  </aside>
+
+  <div class="flex-1 min-w-0">
+    <app-shared-calendar
+      [shiftDropEnabled]="shiftDropEnabled"
+      [dragOverDay]="dragOverDay"
+      [calendarViewType]="calendarViewType"
+      [calendarEvents]="calendarEvents"
+      [isLoadingOccurrences]="isLoadingOccurrences"
+      [weekDays]="weekDays"
+      [calendarDays]="calendarDays"
+      [weeklyDays]="weeklyDays"
+      [timeSlots]="timeSlots"
+      [currentDate]="currentDate"
+      [getCalendarTitle]="getCalendarTitle.bind(this)"
+      [isToday]="isToday.bind(this)"
+      [isCurrentMonth]="isCurrentMonth.bind(this)"
+      [isPastDate]="isPastDate.bind(this)"
+      [getEventsForDay]="getEventsForDay.bind(this)"
+      [formatTime]="formatTime.bind(this)"
+      [formatHour]="formatHour.bind(this)"
+      [formatDate]="formatDate.bind(this)"
+      [getEventTopPosition]="getEventTopPosition.bind(this)"
+      [getEventHeight]="getEventHeight.bind(this)"
+      [getEventLeftPosition]="getEventLeftPosition.bind(this)"
+      [getEventWidth]="getEventWidth.bind(this)"
+      [getEventLeftBorderColor]="getEventLeftBorderColor.bind(this)"
+      [getEventBackgroundColor]="getEventBackgroundColor.bind(this)"
+      [getProgramName]="getProgramName.bind(this)"
+      [getStaffCount]="getStaffCount.bind(this)"
+      [getAssignedHours]="getAssignedHours.bind(this)"
+      [getTargetHours]="getTargetHours.bind(this)"
+      (viewTypeChange)="setCalendarViewType($event)"
+      (previous)="previousPeriod()"
+      (next)="nextPeriod()"
+      (today)="goToToday()"
+      (dayDrop)="onCalendarDayDrop($event)"
+      (eventClick)="showEventDetails($event.event, $event.domEvent)">
+    </app-shared-calendar>
+  </div>
+</div>
+
+<!-- Create / Edit Schedule (ICM) -->
+<icm-create-popup
+  [visible]="showScheduleModal"
+  [useDefaultForm]="false"
+  [useScheduleForm]="true"
+  [panelClass]="'max-w-4xl max-h-[90vh] overflow-visible'"
+  [header]="isEditingScheduleInModal ? 'Update Schedule' : 'Create Schedule'"
+  [icon]="isEditingScheduleInModal ? 'bi bi-pencil-square' : 'bi bi-plus-circle'"
+  [scheduleForm]="scheduleForm"
+  [draggedShift]="draggedShift"
+  [dropDate]="dropDate"
+  [programs]="programs"
+  [frequencyDropdownOptions]="frequencyOptions"
+  [repeatEveryDropdownOptions]="repeatEveryOptions"
+  [isEditingScheduleInModal]="isEditingScheduleInModal"
+  [isCreatingSchedule]="isSavingSchedule"
+  [selectedSchedule]="selectedSchedule"
+  [getProgramNameForShift]="getProgramNameForShiftFn"
+  [formatDateForDisplay]="formatDateForDisplay.bind(this)"
+  [getShiftTimeRange]="getShiftTimeRangeFn"
+  [getUpdatedByInfo]="getUpdatedByInfoFn"
+  [getStaffName]="getStaffNameFn"
+  [getMinRepeatUntilDate]="getMinRepeatUntilDateFn"
+  [getFrequencySelectedId]="getFrequencySelectedIdFn"
+  [getRepeatEverySelectedId]="getRepeatEverySelectedIdFn"
+  [isWeekDaySelected]="isWeekDaySelectedFn"
+  [toggleWeekDay]="toggleWeekDayFn"
+  [getMonthDays]="getMonthDaysFn"
+  [isMonthDaySelected]="isMonthDaySelectedFn"
+  [toggleMonthDay]="toggleMonthDayFn"
+  [hasScheduleFormChanges]="hasScheduleFormChangesFn"
+  [canCreateSchedules]="canCreateSchedules"
+  [canEditSchedules]="canEditSchedules"
+  (onClose)="closeScheduleModal()"
+  (onScheduleProgramChange)="onScheduleProgramChange($event)"
+  (onCreateSchedule)="onIcmCreateScheduleClick()"
+  (onSaveAsDraft)="onIcmSaveScheduleDraft()"
+></icm-create-popup>
+
+<!-- Staff assignment (ICM) -->
+<icm-update-popup
+  [visible]="showStaffAssignmentModal"
+  [useDefaultForm]="false"
+  [useStaffAssignmentForm]="true"
+  [panelClass]="'max-w-4xl w-full max-h-[90vh] overflow-visible'"
+  [header]="'Add Staff'"
+  [icon]="'bi bi-people'"
+  [selectedShift]="selectedShift"
+  [selectedSchedule]="selectedSchedule"
+  [frequencyRRule]="staffModalFrequencyRRule"
+  [staffAssignments]="staffAssignments"
+  [staffSearchQuery]="staffSearchQuery"
+  [showStaffDropdown]="showStaffDropdown"
+  [filteredStaffList]="filteredStaffList"
+  [currentStaffAssignment]="currentStaffAssignment"
+  [editingStaffAssignmentIndex]="editingStaffAssignmentIndex"
+  [newStaffAssignment]="newStaffAssignment"
+  [hasDraftAssignmentChanges]="hasDraftAssignmentChanges"
+  [draftAssignmentRules]="draftAssignmentRules"
+  [isSavingAssignmentDraft]="isAssigningStaff"
+  [isPublishingAssignmentDraft]="isPublishingAssignmentDraft"
+  [timeOffRequests]="timeOffRequests"
+  [canAssignStaff]="canAssignStaff"
+  [canUnassignStaff]="canUnassignStaff"
+  [canEditSchedules]="canEditSchedules"
+  [canDeleteSchedules]="canDeleteSchedules"
+  [calculateTotalAssignedHours]="calculateTotalAssignedHoursFn"
+  [calculateRemainingHours]="calculateRemainingHoursFn"
+  [getFrequencyDisplay]="getFrequencyDisplay.bind(this)"
+  [getRepeatEveryDisplay]="getRepeatEveryDisplayFn"
+  [formatDateForDisplay]="formatDateForDisplay.bind(this)"
+  [getUpdatedByInfo]="getUpdatedByInfoFn"
+  [getProgramName]="getProgramNameByLocationIdFn"
+  [getStaffName]="getStaffNameFn"
+  [getStaffRole]="getStaffRole.bind(this)"
+  [formatTimeToAMPM]="formatTimeToAMPM.bind(this)"
+  [getAssignmentHours]="getAssignmentHoursFn"
+  [isStaffAssignmentDraft]="isStaffAssignmentDraftFn"
+  [isSingleOccurrenceNoParentScheduleForAssignment]="isSingleOccurrenceNoParentScheduleForAssignmentFn"
+  [getSingleOccurrenceDateForAssignment]="getSingleOccurrenceDateForAssignmentFn"
+  [getScheduleInstanceDates]="getScheduleInstanceDatesFn"
+  [getDateDisplayText]="getDateDisplayTextFn"
+  [isOvernightShift]="isOvernightShiftForModal"
+  (onClose)="closeStaffAssignmentModalFromIcm()"
+  (staffSearchQueryChange)="staffSearchQuery = $event"
+  (showStaffDropdownChange)="showStaffDropdown = $event"
+  (filterStaffList)="filterStaffList()"
+  (addStaffToAssignment)="addStaffToAssignment($event)"
+  (editStaffAssignment)="editStaffAssignmentFromIcm($event)"
+  (removeStaffAssignment)="removeStaffAssignmentFromIcm($event)"
+  (cancelStaffAssignmentForm)="cancelStaffAssignmentFormFromIcm()"
+  (saveStaffAssignmentForm)="saveStaffAssignmentFormFromIcm()"
+  (publishDraftAssignmentRules)="publishDraftAssignmentRulesFromIcm()"
+  (closeStaffAssignmentModal)="closeStaffAssignmentModalFromIcm()"
+  (startNewStaffAssignment)="startNewStaffAssignmentFromIcm()"
+  (staffAssignmentFieldChange)="onStaffAssignmentFieldChangeFromIcm($event)"
+></icm-update-popup>
+
+<!-- Event Details Popup -->
+<div
+  class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+  *ngIf="showEventPopup && clickedEvent"
+  (click)="closeEventPopup()"
+>
+  <div class="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col" (click)="$event.stopPropagation()">
+    <div class="border-b border-gray-200 px-4 py-4 flex-shrink-0">
+      <div class="flex items-start justify-between">
+        <div class="flex items-center">
+          <div class="mr-3">
+            <i class="bi bi-calendar-event text-blue-600 text-2xl"></i>
+          </div>
+          <div>
+            <h5 class="text-lg font-semibold text-gray-900 mb-1">{{ selectedShift?.name || clickedEvent.title }}</h5>
+            <p class="text-sm text-gray-500 m-0">
+              <i class="bi bi-clock mr-1"></i>{{ formatTime(clickedEvent.start.toISOString()) }} - {{ formatTime(clickedEvent.end.toISOString()) }}
+            </p>
+            <p class="text-xs text-gray-500 mt-1" *ngIf="selectedSchedule?.rRule">
+              {{ getFrequencyDisplay(selectedSchedule?.rRule) }}
+            </p>
+          </div>
+        </div>
+        <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" (click)="closeEventPopup()">
+          <i class="bi bi-x-lg text-xl"></i>
+        </button>
+      </div>
+    </div>
+    <div class="px-4 py-4 overflow-y-auto flex-1">
+      <div class="flex flex-wrap gap-2 mb-4" *ngIf="clickedEvent.resource?.scheduleId">
+        <button type="button" class="px-3 py-1.5 text-sm rounded-md bg-slate-800 text-white" (click)="openEditScheduleFromEvent()">
+          Edit schedule
+        </button>
+        <button type="button" class="px-3 py-1.5 text-sm rounded-md bg-blue-600 text-white" (click)="openStaffForEvent()">
+          Add staff
+        </button>
+      </div>
+      <div class="mb-6">
+        <div class="border-b border-gray-200 pb-3 mb-4">
+          <div class="flex items-center">
+            <i class="bi bi-info-circle-fill text-blue-600 mr-2"></i>
+            <h5 class="m-0 font-semibold text-blue-600">Shift Details</h5>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="text-xs text-gray-500 mb-1">Shift Name</p>
+            <p class="font-medium text-gray-900">{{ selectedShift?.name || 'N/A' }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-1">Target Hours</p>
+            <p class="font-medium text-gray-900">{{ getTargetHours(clickedEvent) }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-1">Start Time</p>
+            <p class="font-medium text-gray-900">{{ getShiftStartTime() }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-1">End Time</p>
+            <p class="font-medium text-gray-900">{{ getShiftEndTime() }}</p>
+          </div>
+          <div class="col-span-2" *ngIf="selectedShift?.notes">
+            <p class="text-xs text-gray-500 mb-1">Notes</p>
+            <p class="font-medium text-gray-900">{{ getShiftNotes() }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="border-b border-gray-200 pb-3 mb-4">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center">
+              <i class="bi bi-people-fill text-blue-600 mr-2"></i>
+              <h5 class="m-0 font-semibold text-blue-600">Staff Assigned</h5>
+            </div>
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{ getStaffAssignmentsForEvent(clickedEvent).length }} staff</span>
+          </div>
+        </div>
+
+        <div *ngIf="getStaffAssignmentsForEvent(clickedEvent).length">
+          <div *ngFor="let assignment of getStaffAssignmentsForEvent(clickedEvent); let last = last" class="mb-3" [class.mb-0]="last">
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center mb-1">
+                    <i class="bi bi-person-circle text-gray-400 mr-2"></i>
+                    <h6 class="m-0 font-semibold text-gray-900">{{ assignment.staffName }}</h6>
+                  </div>
+                  <p class="m-0 text-sm text-gray-500 ml-6">{{ assignment.roleName }}</p>
+                </div>
+                <div class="flex gap-4 items-center">
+                  <div class="text-center">
+                    <p class="text-xs text-gray-500 mb-1"><i class="bi bi-clock-fill mr-1"></i>Duration</p>
+                    <p class="font-medium text-gray-900 text-sm">{{ assignment.startTime }} - {{ assignment.endTime }}</p>
+                  </div>
+                  <div class="text-center">
+                    <p class="text-xs text-gray-500 mb-1"><i class="bi bi-hourglass-split mr-1"></i>Hours</p>
+                    <p class="font-medium text-gray-900 text-sm">{{ assignment.assignedHours | number: '1.0-2' }}h</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="!getStaffAssignmentsForEvent(clickedEvent).length" class="text-center py-8">
+          <p class="text-gray-500 m-0">No staff assigned</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

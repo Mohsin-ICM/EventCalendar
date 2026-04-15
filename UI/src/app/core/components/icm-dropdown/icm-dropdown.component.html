@@ -1,0 +1,45 @@
+<div class="program-dropdown" [class.program-dropdown--open]="isOpen" [class.program-dropdown--invalid]="invalid">
+  <button
+    type="button"
+    class="program-dropdown__trigger"
+    #triggerButton
+    [disabled]="disabled"
+    (click)="toggleOpen()">
+    <span
+      *ngIf="!isOpen"
+      class="program-dropdown__label"
+      [class.program-dropdown__label--placeholder]="selectedProgramId === null || selectedProgramId === undefined">
+      {{ getSelectedLabel() }}
+    </span>
+    <input
+      *ngIf="isOpen"
+      #searchInput
+      type="text"
+      class="program-dropdown__trigger-input"
+      placeholder="Search program"
+      [value]="searchTerm"
+      (click)="$event.stopPropagation()"
+      (mousedown)="$event.stopPropagation()"
+      (input)="onSearchChange($any($event.target).value)" />
+    <span class="program-dropdown__caret" aria-hidden="true"></span>
+  </button>
+
+  <div class="program-dropdown__panel" #panel *ngIf="isOpen">
+    <div class="program-dropdown__option" *ngIf="includeAllOption" (click)="selectProgram(0)">
+      All
+    </div>
+    <div
+      *ngFor="let program of filteredPrograms"
+      class="program-dropdown__option"
+      [class.program-dropdown__option--disabled]="getOptionDisabled(program)"
+      [class.program-dropdown__option--selected]="isProgramSelected(getProgramValue(program))"
+      [style.padding-left]="getOptionPadding(program)"
+      (click)="getOptionDisabled(program) ? null : selectProgram(getProgramValue(program))">
+      <span class="program-dropdown__option-label">{{ program.label }}</span>
+      <span class="program-dropdown__check" *ngIf="multiple && isProgramSelected(getProgramValue(program))">✓</span>
+    </div>
+    <div class="program-dropdown__empty" *ngIf="filteredPrograms.length === 0">
+      No programs found
+    </div>
+  </div>
+</div>

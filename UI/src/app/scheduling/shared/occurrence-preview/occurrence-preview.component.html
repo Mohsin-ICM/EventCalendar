@@ -1,0 +1,35 @@
+<div>
+  <div class="flex items-center gap-2 mb-2">
+    <i class="bi bi-calendar3 text-blue-500 text-sm"></i>
+    <span class="text-sm font-medium text-gray-700">Next occurrences</span>
+    <span class="text-xs text-gray-400">(click to skip / include)</span>
+  </div>
+
+  <div class="space-y-1 max-h-48 overflow-y-auto">
+    <div
+      *ngFor="let occ of occurrences"
+      (click)="toggle(occ.isoLocal)"
+      class="flex items-center justify-between px-3 py-1.5 rounded-md cursor-pointer transition-colors text-sm"
+      [class.bg-gray-100]="occ.excluded"
+      [class.text-gray-400]="occ.excluded"
+      [class.line-through]="occ.excluded"
+      [class.bg-blue-50]="!occ.excluded"
+      [class.text-gray-700]="!occ.excluded">
+      <span>
+        <i class="bi mr-1.5"
+           [class.bi-calendar-x]="occ.excluded"
+           [class.bi-calendar-check]="!occ.excluded"></i>
+        {{ occ.label }}
+      </span>
+      <span class="text-xs"
+            [class.text-red-400]="occ.excluded"
+            [class.text-gray-400]="!occ.excluded">
+        {{ occ.excluded ? 'skipped' : 'click to skip' }}
+      </span>
+    </div>
+
+    <p class="text-xs text-gray-400 px-3" *ngIf="occurrences.length === 0">
+      No occurrences to show
+    </p>
+  </div>
+</div>

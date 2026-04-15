@@ -1,0 +1,143 @@
+<div class="fixed inset-0 flex items-center justify-center overflow-y-auto px-2 py-3 sm:px-4 sm:py-6" style="z-index: 2000;">
+  <div class="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-200" (click)="onCancel()"></div>
+
+  <div class="relative bg-white rounded-lg shadow-xl w-full mx-auto transform transition-all duration-200 animate-zoom-fade-in max-w-2xl max-h-[92vh] overflow-hidden">
+    <div class="flex items-start justify-between px-3 py-2 sm:px-6 sm:py-3 border-b border-gray-200 bg-[#EFF5FF]">
+      <div class="flex items-center gap-2 sm:gap-3">
+        <i class="bi bi-calendar2-check text-blue-500 text-base sm:text-xl"></i>
+        <div>
+          <h3 class="text-lg sm:text-xl text-gray-900 tracking-tight py-1">Occurrence Actions</h3>
+          <p class="text-xs text-gray-500 tracking-tight">
+            {{ data?.event?.title }} - {{ data?.occurrence?.startsAt | date:'MMM d, y, h:mm a' }}
+          </p>
+        </div>
+      </div>
+      <button type="button" (click)="onCancel()"
+              class="text-gray-500 hover:text-gray-700 transition-colors p-1 -mr-1 mt-1">
+        <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="px-3 py-4 sm:px-6 sm:py-5 overflow-y-auto max-h-[calc(92vh-130px)]">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+        <button
+          type="button"
+          (click)="skip()"
+          class="px-4 py-2 text-sm rounded-md border transition-colors"
+          style="background-color:white; color:#E7000B; border-color:#E7000B"
+          onmouseover="this.style.backgroundColor='#E7000B'; this.style.color='white'"
+          onmouseout="this.style.backgroundColor='white'; this.style.color='#E7000B'; this.style.borderColor='#E7000B'">
+          <i class="bi bi-skip-forward mr-1"></i>Skip This Occurrence
+        </button>
+
+        <button
+          type="button"
+          (click)="setMode('move')"
+          class="px-4 py-2 text-sm rounded-md border transition-colors"
+          [style.background-color]="mode() === 'move' ? '#2362A3' : 'white'"
+          [style.color]="mode() === 'move' ? 'white' : '#2362A3'"
+          style="border-color:#2362A3">
+          <i class="bi bi-arrows-move mr-1"></i>Move This Occurrence
+        </button>
+
+        <button
+          type="button"
+          (click)="setMode('split')"
+          class="px-4 py-2 text-sm rounded-md border transition-colors"
+          [style.background-color]="mode() === 'split' ? '#2362A3' : 'white'"
+          [style.color]="mode() === 'split' ? 'white' : '#2362A3'"
+          style="border-color:#2362A3">
+          <i class="bi bi-scissors mr-1"></i>Edit This & Future (Split)
+        </button>
+
+        <button
+          type="button"
+          (click)="setMode('edit-all')"
+          class="px-4 py-2 text-sm rounded-md border transition-colors"
+          [style.background-color]="mode() === 'edit-all' ? '#2362A3' : 'white'"
+          [style.color]="mode() === 'edit-all' ? 'white' : '#2362A3'"
+          style="border-color:#2362A3">
+          <i class="bi bi-pencil-square mr-1"></i>Edit All Occurrences
+        </button>
+      </div>
+
+      <div *ngIf="mode() === 'move'" class="border border-gray-200 rounded-md p-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">New Start</label>
+            <input
+              type="datetime-local"
+              [formControl]="moveStartControl"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">New End</label>
+            <input
+              type="datetime-local"
+              [formControl]="moveEndControl"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          </div>
+        </div>
+        <div class="mt-4 flex justify-end">
+          <button
+            type="button"
+            (click)="move()"
+            class="px-4 py-2 text-sm rounded-md border transition-colors"
+            style="background-color:white; color:#2362A3; border-color:#2362A3"
+            onmouseover="this.style.backgroundColor='#2362A3'; this.style.color='white'"
+            onmouseout="this.style.backgroundColor='white'; this.style.color='#2362A3'; this.style.borderColor='#2362A3'">
+            Apply Move
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="mode() === 'split' || mode() === 'edit-all'" class="border border-gray-200 rounded-md p-4">
+        <p class="text-sm font-medium text-gray-700 mb-3">
+          {{ mode() === 'split' ? 'Define schedule for this and future occurrences' : 'Define schedule for all occurrences' }}
+        </p>
+        <app-schedule-definition
+          [value]="workingDefinition()"
+          [showPreview]="true"
+          (valueChange)="onDefinitionChange($event)">
+        </app-schedule-definition>
+
+        <div class="mt-4 flex justify-end">
+          <button
+            *ngIf="mode() === 'split'"
+            type="button"
+            (click)="split()"
+            class="px-4 py-2 text-sm rounded-md border transition-colors"
+            style="background-color:white; color:#2362A3; border-color:#2362A3"
+            onmouseover="this.style.backgroundColor='#2362A3'; this.style.color='white'"
+            onmouseout="this.style.backgroundColor='white'; this.style.color='#2362A3'; this.style.borderColor='#2362A3'">
+            Apply Split
+          </button>
+          <button
+            *ngIf="mode() === 'edit-all'"
+            type="button"
+            (click)="editAll()"
+            class="px-4 py-2 text-sm rounded-md border transition-colors"
+            style="background-color:white; color:#2362A3; border-color:#2362A3"
+            onmouseover="this.style.backgroundColor='#2362A3'; this.style.color='white'"
+            onmouseout="this.style.backgroundColor='white'; this.style.color='#2362A3'; this.style.borderColor='#2362A3'">
+            Save for All
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-end px-3 py-3 sm:px-6 border-t border-gray-200 bg-white">
+      <button
+        type="button"
+        (click)="onCancel()"
+        class="px-4 py-2 text-sm rounded-md border transition-colors"
+        style="background-color:white; color:#E7000B; border-color:#E7000B"
+        onmouseover="this.style.backgroundColor='#E7000B'; this.style.color='white'"
+        onmouseout="this.style.backgroundColor='white'; this.style.color='#E7000B'; this.style.borderColor='#E7000B'">
+        Close
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,13 @@
+<div class="flex gap-1.5 flex-wrap">
+  <button
+    type="button"
+    *ngFor="let label of labels; let i = index"
+    (click)="toggle(i)"
+    class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-medium transition-colors"
+    [class.bg-blue-600]="isSelected(i)"
+    [class.text-white]="isSelected(i)"
+    [class.bg-gray-100]="!isSelected(i)"
+    [class.text-gray-700]="!isSelected(i)">
+    {{ label }}
+  </button>
+</div>

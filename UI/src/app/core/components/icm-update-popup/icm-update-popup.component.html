@@ -1,0 +1,599 @@
+<div *ngIf="visible"
+     class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-2 py-3 sm:px-4 sm:py-6"
+     style="z-index: 2000;"
+     [class.is-closing]="isClosing">
+  <div class="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-200"></div>
+
+  <div class="relative bg-white rounded-lg shadow-xl max-w-[44rem] w-full mx-4 transform transition-all duration-200 animate-zoom-fade-in flex flex-col max-h-[calc(100vh-120px)]"
+       [ngClass]="panelClass">
+    <div *ngIf="useStaffAssignmentForm; else defaultHeader" class="flex items-start justify-between px-3 py-2  border-b border-slate-200 bg-[#EFF4FF]">
+      <div class="flex items-center gap-1">
+        <div class="flex h-11 w-11  justify-center rounded-full text-sky-600">
+          <i [class]="icon" class="text-xl mt-2"></i>
+        </div>
+        <div>
+          <h3 class="text-xl text-slate-900 tracking-tight">{{ header }}</h3>
+          <p class="text-sm text-slate-500 mt-1 tracking-tight" *ngIf="subHeader">{{ subHeader }}</p>
+        </div>
+      </div>
+      <button
+        *ngIf="showCloseButton"
+        type="button"
+        (click)="close()"
+        class="inline-flex h-9 w-9 mt-1 items-center justify-center  hover:bg-slate-50 hover:text-slate-700 transition-colors">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+    <ng-template #defaultHeader>
+      <div class="flex items-start justify-between px-6 py-3 bg-[#EFF5FF] border-b border-gray-200">
+        <div class="flex items-start">
+          <i [class]="icon" class="text-[#2362A3] mr-3 text-xl"></i>
+          <div>
+            <h3 class="text-xl text-gray-900 tracking-tight">{{ header }}</h3>
+          </div>
+        </div>
+        <button
+          *ngIf="showCloseButton"
+          type="button"
+          (click)="close()"
+          class="text-gray-400 hover:text-gray-500 transition-colors duration-200">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </ng-template>
+
+    <div class="flex-1 overflow-y-auto">
+    <div class="px-6 py-6" *ngIf="useDefaultForm; else customContent">
+      <form [formGroup]="updateForm" (ngSubmit)="submit()">
+        <div class="mb-4" *ngIf="showName">
+          <label class="block text-sm font-medium text-gray-700 mb-2 tracking-tight">Shift Name <span class="text-red-500">*</span></label>
+          <input
+            type="text"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            formControlName="name"
+            placeholder="e.g., Morning Shift"
+            [class.border-red-500]="updateForm.get('name')?.invalid && updateForm.get('name')?.touched">
+          <p class="mt-1 text-sm text-red-600 tracking-tight" *ngIf="updateForm.get('name')?.invalid && updateForm.get('name')?.touched">
+            Shift name is required
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4" *ngIf="showStartTime || showEndTime">
+          <div *ngIf="showStartTime">
+            <label class="block text-sm font-medium text-gray-700 mb-2 tracking-tight">Start Time <span class="text-red-500">*</span></label>
+            <input
+              type="time"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              formControlName="startTime"
+              [class.border-red-500]="updateForm.get('startTime')?.invalid && updateForm.get('startTime')?.touched">
+            <p class="mt-1 text-sm text-red-600 tracking-tight" *ngIf="updateForm.get('startTime')?.invalid && updateForm.get('startTime')?.touched">
+              Start time is required
+            </p>
+          </div>
+          <div *ngIf="showEndTime">
+            <label class="block text-sm font-medium text-gray-700 mb-2 tracking-tight">End Time <span class="text-red-500">*</span></label>
+            <input
+              type="time"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              formControlName="endTime"
+              [class.border-red-500]="updateForm.get('endTime')?.invalid && updateForm.get('endTime')?.touched">
+            <p class="mt-1 text-sm text-red-600 tracking-tight" *ngIf="updateForm.get('endTime')?.invalid && updateForm.get('endTime')?.touched">
+              End time is required
+            </p>
+          </div>
+        </div>
+
+        <div class="mb-6" *ngIf="showTargetHours">
+          <label class="block text-sm font-medium text-gray-700 mb-2 tracking-tight">Target # of Hours <span class="text-red-500">*</span></label>
+          <input
+            type="number"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            formControlName="targetHours"
+            placeholder="8"
+            min="0.5"
+            step="0.5"
+            [class.border-red-500]="updateForm.get('targetHours')?.invalid && updateForm.get('targetHours')?.touched">
+          <p class="mt-1 text-sm text-gray-500 tracking-tight">Enter the target number of hours for this shift</p>
+          <p class="mt-1 text-sm text-red-600 tracking-tight" *ngIf="updateForm.get('targetHours')?.invalid && updateForm.get('targetHours')?.touched">
+            Target hours is required and must be greater than 0
+          </p>
+        </div>
+
+        <div class="flex gap-3 justify-end">
+          <button type="button" class="px-3 py-2 text-sm rounded-md transition-colors w-full sm:w-auto border tracking-tight" style="background-color: white; color: #E7000B; border-color: #E7000B;" onmouseover="this.style.backgroundColor='#E7000B'; this.style.color='white'; this.style.borderColor='#E7000B'" onmouseout="this.style.backgroundColor='white'; this.style.color='#E7000B'; this.style.borderColor='#d1d5db'" (click)="close()">
+            <i class="bi bi-x-circle mr-1"></i>Cancel
+          </button>
+          <button type="submit" class="px-3 py-2 text-sm rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto border border-gray-300" [disabled]="updateForm.invalid || isSaving" style="background-color: white; color: #2362A3; border-color: #2362A3;" onmouseover="this.style.backgroundColor='#2362A3'; this.style.color='white'; this.style.borderColor='#2362A3'" onmouseout="this.style.backgroundColor='white'; this.style.color='#2362A3';">
+            <i class="bi bi-check-circle mr-1" *ngIf="!isSaving"></i>
+            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 inline" style="color: currentColor;" *ngIf="isSaving" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            {{ isSaving ? 'Updating...' : 'Update Shift' }}
+          </button>
+        </div>
+      </form>
+    </div>
+    <ng-template #customContent>
+      <div class="px-6 py-3" *ngIf="useStaffAssignmentForm; else transcludedContent">
+        <div *ngIf="selectedShift" class="space-y-6">
+          <section class="rounded-2xl border border-sky-200 bg-sky-50/70 p-3 shadow-sm">
+            <div class="grid gap-0 md:grid-cols-3">
+              <div>
+                <div class="text-lg font-medium text-slate-500">Shift Name</div>
+                <div class=" text-lg font-semibold text-slate-900">{{ selectedShift.name }}</div>
+              </div>
+              <div>
+                <div class="text-lg font-medium text-slate-500">Program</div>
+                <div class=" text-lg font-semibold text-slate-900">{{ getProgramName?.((selectedSchedule?.locationId != null ? selectedSchedule.locationId : selectedShift.locationId)) || 'N/A' }}</div>
+              </div>
+              <div>
+                <div class="text-lg font-medium text-slate-500">Date</div>
+                <div class=" text-lg font-semibold text-slate-900">
+                  {{ assignmentHeaderDateRangeLabel || 'N/A' }}
+                </div>
+              </div>
+              <div>
+                <div class="text-lg font-medium text-slate-500">Start - End Time</div>
+                <div class=" text-lg font-semibold text-slate-900">
+                  {{ (selectedShift?.startTime | timeRange:selectedShift?.endTime) || 'N/A' }}
+                </div>
+              </div>
+              <div>
+                <div class="text-lg font-medium text-slate-500">Assign / Target Hours</div>
+                <div class=" text-lg font-semibold text-slate-900">
+                  {{ calculateTotalAssignedHours?.() | number:'1.1-1' }} / {{ selectedSchedule?.targetHours ?? selectedShift.targetHours || 'N/A' }} hrs
+                </div>
+              </div>
+              <div>
+                <div class="text-lg font-medium text-slate-500">Frequency</div>
+                <div class=" text-lg font-semibold text-slate-900">{{ getFrequencyDisplay?.(frequencyRRule || selectedSchedule?.rRule) || 'N/A' }}</div>
+              </div>
+            </div>
+            <div class=" flex items-center text-xs text-slate-500 mt-2" *ngIf="selectedSchedule?.updatedOn || getUpdatedByInfo?.(selectedSchedule)">
+              <i class="bi bi-person-check mr-2 text-slate-400"></i>
+              <span *ngIf="selectedSchedule?.updatedOn; else legacyUpdatedByInfo">
+                {{ selectedSchedule.updatedOn | icmDateTime:'dateTimeWithDescription':getUpdatedByNameForSchedule(selectedSchedule) }}
+              </span>
+              <ng-template #legacyUpdatedByInfo>
+                <span>{{ getUpdatedByInfo?.(selectedSchedule) }}</span>
+              </ng-template>
+            </div>
+          </section>
+
+          <section class="space-y-3">
+            <div class="flex items-center justify-between">
+              <h6 class="text-base font-semibold text-slate-900">Staff Assignment</h6>
+              <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700" *ngIf="staffAssignments.length > 0">
+                {{ staffAssignments.length }} staff, {{ calculateTotalAssignedHours?.() | number:'1.1-1' }}h total
+              </span>
+            </div>
+            <div class="space-y-3" *ngIf="staffAssignments.length > 0">
+              <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" *ngFor="let assignment of staffAssignments; let i = index">
+                <div class="flex items-center justify-between gap-4">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
+                      {{ getStaffInitials(getStaffName?.(assignment.staffId)) }}
+                    </div>
+                    <div class="min-w-0">
+                      <div class="text-sm font-semibold text-slate-900">
+                        {{ getStaffName?.(assignment.staffId) }}
+                        <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 ml-2" *ngIf="selectedSchedule?.status?.toLowerCase() === 'published' && hasDraftAssignmentChanges && isStaffAssignmentDraft?.(assignment)">
+                          <i class="bi bi-file-earmark-text mr-1"></i>Draft
+                        </span>
+                      </div>
+                      <div
+                        class="text-xs text-slate-500 mb-1"
+                        *ngIf="editingStaffAssignmentIndex === i">
+                        {{ getStaffRole?.(assignment.staffId) }} • {{ getAssignmentHours?.(assignment) }}h
+                      </div>
+                      
+                      <div class="text-xs text-slate-500" *ngIf="editingStaffAssignmentIndex !== i">{{ getStaffRole?.(assignment.staffId) }}</div>
+                      <div class="mt-2 flex flex-wrap gap-3 text-xs text-slate-500">
+                        <span class="inline-flex items-center gap-1" *ngIf="editingStaffAssignmentIndex !== i">
+                          <i class="bi bi-calendar-check"></i>
+                          {{ getAssignmentHours?.(assignment) }}h
+                        </span>
+                        <ng-container *ngIf="editingStaffAssignmentIndex !== i">
+                          <span
+                            class="inline-flex items-center gap-1"
+                            *ngIf="assignment.displayEffectiveFrom || assignment.effectiveFrom">
+                            <i class="bi bi-calendar-range"></i>
+                            {{ (assignment.displayEffectiveFrom || assignment.effectiveFrom) | icmDateTime:'dateOnly' }} - {{ (assignment.displayEffectiveTo || assignment.effectiveTo || assignment.displayEffectiveFrom || assignment.effectiveFrom) | icmDateTime:'dateOnly' }}
+                          </span>
+                        </ng-container>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Read-only actions -->
+                  <div class="flex items-center gap-2 flex-nowrap shrink-0" *ngIf="editingStaffAssignmentIndex !== i; else inlineEditActions">
+                    <div class="flex flex-col items-end gap-2">
+                      <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                        {{ assignment.startTime | timeRange:assignment.endTime }}
+                      </span>
+                      <div *ngIf="getTimeOffBadgeForAssignment(assignment) as timeOff">
+                        <span
+                          class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold cursor-default"
+                          [ngClass]="getTimeOffBadgeClasses(timeOff)"
+                          (mouseenter)="openTimeOffTooltip($event, timeOff, assignment)"
+                          (mouseleave)="closeTimeOffTooltip()">
+                          <i class="bi bi-exclamation-triangle text-[12px]"></i>
+                          <span>{{ getTimeOffBadgeText(timeOff) }}</span>
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      *ngIf="canAssignStaff"
+                      [disabled]="editingStaffAssignmentIndex !== null && editingStaffAssignmentIndex !== i"
+                      (click)="editStaffAssignment.emit(i)"
+                      title="Edit">
+                      <i class="bi bi-pencil" style="color: #e17100;"></i>
+                    </button>
+                    <button
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      *ngIf="canUnassignStaff"
+                      [disabled]="editingStaffAssignmentIndex !== null && editingStaffAssignmentIndex !== i"
+                      (click)="removeStaffAssignment.emit(i)"
+                      title="Delete">
+                      <lucide-icon name="user-minus"></lucide-icon>
+                    </button>
+                    <div *ngIf="!canAssignStaff && !canUnassignStaff" class="text-xs text-slate-500">
+                      <i class="bi bi-lock mr-1"></i> Read-only
+                    </div>
+                  </div>
+
+                  <!-- Inline edit (start/end/until) -->
+                  <ng-template #inlineEditActions>
+                    <div class="w-[28rem]">
+                      <div class="grid grid-cols-3 gap-2">
+                        <div>
+                          <label class="block text-[11px] font-medium text-slate-500">Assign Until</label>
+                          <div class="assign-until-picker mt-1">
+                            <button type="button" (click)="toggleAssignUntilCalendar()">
+                              <i class="bi bi-calendar-event"></i>
+                              <span>{{ getAssignUntilDisplayText() }}</span>
+                              <i class="bi bi-chevron-down"></i>
+                            </button>
+                            <div class="assign-until-calendar" *ngIf="assignUntilCalendarOpen">
+                              <div class="assign-until-calendar__header">
+                                <button type="button" (click)="goAssignUntilPrevMonth()">
+                                  <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <div class="assign-until-calendar__title">{{ getAssignUntilMonthLabel() }}</div>
+                                <button type="button" (click)="goAssignUntilNextMonth()">
+                                  <i class="bi bi-chevron-right"></i>
+                                </button>
+                              </div>
+                              <div class="assign-until-calendar__weekdays">
+                                <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                              </div>
+                              <div class="assign-until-calendar__grid">
+                                <button
+                                  type="button"
+                                  *ngFor="let day of getAssignUntilCalendarDays()"
+                                  [class.is-outside]="!day.inMonth"
+                                  [class.is-disabled]="!day.enabled"
+                                  [class.is-selected]="currentStaffAssignment?.effectiveTo === day.iso"
+                                  (click)="selectAssignUntilDate(day.iso)"
+                                  [disabled]="!day.enabled">
+                                  {{ day.date.getDate() }}
+                                </button>
+                              </div>
+                              <div class="assign-until-calendar__actions">
+                                <button type="button" (click)="clearAssignUntilDate()">Clear</button>
+                                <button type="button" (click)="closeAssignUntilCalendar()">Close</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <label class="block text-[11px] font-medium text-slate-500">Start Time</label>
+                          <input
+                            type="time"
+                            class="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2"
+                            [ngClass]="showStartTimeRequiredError ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'"
+                            [attr.min]="timeInputMin"
+                            [attr.max]="timeInputMax"
+                            [ngModel]="currentStaffAssignment?.startTime"
+                            (ngModelChange)="onStaffAssignmentTimeChange('startTime', $event)">
+                          <div class="mt-1 text-xs font-medium text-red-600" *ngIf="showStartTimeRequiredError">
+                            Start time is required.
+                          </div>
+                        </div>
+                        <div>
+                          <label class="block text-[11px] font-medium text-slate-500">End Time</label>
+                          <input
+                            type="time"
+                            class="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2"
+                            [ngClass]="showEndTimeRequiredError ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'"
+                            [attr.min]="timeInputMin"
+                            [attr.max]="timeInputMax"
+                            [ngModel]="currentStaffAssignment?.endTime"
+                            (ngModelChange)="onStaffAssignmentTimeChange('endTime', $event)">
+                          <div class="mt-1 text-xs font-medium text-red-600" *ngIf="showEndTimeRequiredError">
+                            End time is required.
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="mt-3 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          class="px-3 py-2 rounded-lg border border-slate-300 text-sm font-medium text-slate-700 hover:bg-white"
+                          [disabled]="isSavingAssignmentDraft"
+                          (click)="onCancelStaffAssignmentForm()">
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          class="px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                          [disabled]="isSavingAssignmentDraft"
+                          (click)="onSaveStaffAssignment()">
+                          {{ isSavingAssignmentDraft ? 'Saving...' : 'Save' }}
+                        </button>
+                      </div>
+                    </div>
+                  </ng-template>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-center text-sm text-slate-600" *ngIf="staffAssignments.length === 0 && !(editingStaffAssignmentIndex !== null || newStaffAssignment)">
+              No staff assigned yet. Use "Add Another Staff" to add staff members.
+            </div>
+            <button
+              type="button"
+              class="icm-staff-add-btn w-full rounded-2xl px-4 py-3 text-sm font-semibold transition-colors"
+              *ngIf="canAssignStaff && !(editingStaffAssignmentIndex !== null || newStaffAssignment)"
+              (click)="onStartNewStaffAssignment()">
+              <i class="bi bi-person-plus mr-2"></i>Add Staff
+            </button>
+          </section>
+
+                    <section class="rounded-2xl border border-slate-200 bg-slate-50 p-2" *ngIf="newStaffAssignment">
+            <h6 class="text-sm font-semibold text-slate-700 mb-4">Add New Staff</h6>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label class="block text-xs font-medium text-slate-500">Staff Member <span class="text-red-500">*</span></label>
+                <div class="relative mt-1">
+                  <i class="bi bi-person absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                  <input
+                    type="text"
+                    class="w-full rounded-lg border bg-white px-5 py-2 pl-12 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2"
+                    [ngClass]="showStaffMemberRequiredError ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'"
+                    [ngModel]="staffSearchQuery || (currentStaffAssignment?.staffId ? getStaffName?.(currentStaffAssignment.staffId) : '')"
+                    (ngModelChange)="onStaffSearchQueryChange($event)"
+                    (input)="filterStaffList.emit()"
+                    (focus)="onStaffInputFocus()"
+                    placeholder="Select staff">
+
+                  <div class="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg" *ngIf="showStaffDropdown" style="max-height: 220px; overflow-y: auto;">
+                    <!-- Debug information -->
+                    <div class="text-xs text-red-500 p-2 border-b" style="display: none;">
+                      Debug: showStaffDropdown={{showStaffDropdown}}, filteredStaffList.length={{filteredStaffList.length}}
+                    </div>
+                    <div class="flex items-center justify-between border-b border-slate-100 px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-50">
+                      <span>Select Staff Member ({{filteredStaffList.length}} available)</span>
+                      <button
+                        type="button"
+                        class="text-slate-500 hover:text-slate-700"
+                        (click)="showStaffDropdownChange.emit(false)"
+                        title="Close dropdown">
+                        &times;
+                      </button>
+                    </div>
+                    <div *ngIf="filteredStaffList.length === 0" class="px-3 py-4 text-center text-sm text-slate-500">
+                      No staff found matching your search
+                    </div>
+                    <button
+                      type="button"
+                      class="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                      *ngFor="let staff of filteredStaffList"
+                      (click)="onStaffSelected(staff)">
+                      {{ staff.name }} <span class="text-slate-400 text-xs">({{ staff.role }})</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="mt-1 text-xs font-medium text-red-600" *ngIf="showStaffMemberRequiredError">
+                  Staff member is required.
+                </div>
+                <div class="mt-2 flex flex-col gap-2" *ngIf="selectedStaffTimeOffRequests.length > 0 && !staffSearchQuery">
+                  <div
+                    class="inline-flex w-fit items-center gap-2 rounded-md bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700"
+                    *ngFor="let request of selectedStaffTimeOffRequests | slice:0:2; trackBy: trackByTimeOffId">
+                    <i class="bi bi-clock text-[12px]"></i>
+                    <span>{{ getTimeOffChipText(request) }}</span>
+                  </div>
+                  <div class="text-[11px] font-medium text-slate-500" *ngIf="selectedStaffTimeOffRequests.length > 2">
+                    +{{ selectedStaffTimeOffRequests.length - 2 }} more time off requests
+                  </div>
+                </div>
+              </div>
+              <div *ngIf="isOvernightShift">
+                <label class="block text-xs font-medium text-slate-500">Assign From <span class="text-red-500">*</span></label>
+                <div class="assign-until-picker mt-1">
+                  <button type="button" (click)="toggleAssignFromCalendar()">
+                    <i class="bi bi-calendar-event"></i>
+                    <span>{{ getAssignFromDisplayText() }}</span>
+                    <i class="bi bi-chevron-down"></i>
+                  </button>
+                  <div class="assign-until-calendar" *ngIf="assignFromCalendarOpen">
+                    <div class="assign-until-calendar__header">
+                      <button type="button" (click)="goAssignFromPrevMonth()">
+                        <i class="bi bi-chevron-left"></i>
+                      </button>
+                      <div class="assign-until-calendar__title">{{ getAssignFromMonthLabel() }}</div>
+                      <button type="button" (click)="goAssignFromNextMonth()">
+                        <i class="bi bi-chevron-right"></i>
+                      </button>
+                    </div>
+                    <div class="assign-until-calendar__weekdays">
+                      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                    </div>
+                    <div class="assign-until-calendar__grid">
+                      <button
+                        type="button"
+                        *ngFor="let day of getAssignFromCalendarDays()"
+                        [class.is-outside]="!day.inMonth"
+                        [class.is-disabled]="!day.enabled"
+                        [class.is-selected]="currentStaffAssignment?.effectiveFrom === day.iso"
+                        (click)="selectAssignFromDate(day.iso)"
+                        [disabled]="!day.enabled">
+                        {{ day.date.getDate() }}
+                      </button>
+                    </div>
+                    <div class="assign-until-calendar__actions">
+                      <button type="button" (click)="closeAssignFromCalendar()">Close</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-500">Assign Until</label>
+                <div class="assign-until-picker mt-1">
+                  <button type="button" (click)="toggleAssignUntilCalendar()">
+                    <i class="bi bi-calendar-event"></i>
+                    <span>{{ getAssignUntilDisplayText() }}</span>
+                    <i class="bi bi-chevron-down"></i>
+                  </button>
+                  <div class="assign-until-calendar" *ngIf="assignUntilCalendarOpen">
+                    <div class="assign-until-calendar__header">
+                      <button type="button" (click)="goAssignUntilPrevMonth()">
+                        <i class="bi bi-chevron-left"></i>
+                      </button>
+                      <div class="assign-until-calendar__title">{{ getAssignUntilMonthLabel() }}</div>
+                      <button type="button" (click)="goAssignUntilNextMonth()">
+                        <i class="bi bi-chevron-right"></i>
+                      </button>
+                    </div>
+                    <div class="assign-until-calendar__weekdays">
+                      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                    </div>
+                    <div class="assign-until-calendar__grid">
+                      <button
+                        type="button"
+                        *ngFor="let day of getAssignUntilCalendarDays()"
+                        [class.is-outside]="!day.inMonth"
+                        [class.is-disabled]="!day.enabled"
+                        [class.is-selected]="currentStaffAssignment?.effectiveTo === day.iso"
+                        (click)="selectAssignUntilDate(day.iso)"
+                        [disabled]="!day.enabled">
+                        {{ day.date.getDate() }}
+                      </button>
+                    </div>
+                    <div class="assign-until-calendar__actions">
+                      <button type="button" (click)="clearAssignUntilDate()">Clear</button>
+                      <button type="button" (click)="closeAssignUntilCalendar()">Close</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-500">Start Time <span class="text-red-500">*</span></label>
+                <input
+                  type="time"
+                  class="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2"
+                  [ngClass]="showStartTimeRequiredError ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'"
+                  [attr.min]="timeInputMin"
+                  [attr.max]="timeInputMax"
+                  [ngModel]="currentStaffAssignment?.startTime"
+                  (ngModelChange)="onStaffAssignmentTimeChange('startTime', $event)">
+                <div class="mt-1 text-xs font-medium text-red-600" *ngIf="showStartTimeRequiredError">
+                  Start time is required.
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-500">End Time <span class="text-red-500">*</span></label>
+                <input
+                  type="time"
+                  class="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2"
+                  [ngClass]="showEndTimeRequiredError ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'"
+                  [attr.min]="timeInputMin"
+                  [attr.max]="timeInputMax"
+                  [ngModel]="currentStaffAssignment?.endTime"
+                  (ngModelChange)="onStaffAssignmentTimeChange('endTime', $event)">
+                <div class="mt-1 text-xs font-medium text-red-600" *ngIf="showEndTimeRequiredError">
+                  End time is required.
+                </div>
+              </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-200">
+              <button type="button" class="px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium text-slate-700 hover:bg-white" (click)="onCancelStaffAssignmentForm()">Cancel</button>
+              <button
+                type="button"
+                class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                [disabled]="isSavingAssignmentDraft"
+                (click)="onSaveStaffAssignment()">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 inline" style="color: currentColor;" *ngIf="isSavingAssignmentDraft" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                {{ isSavingAssignmentDraft ? 'Saving' : 'Assign Staff' }}
+              </button>
+            </div>
+          </section>
+
+          <div class="flex flex-wrap justify-end gap-2 pt-4 border-t border-slate-200 sticky bottom-0 bg-white px-6 py-3 -mx-6" style="position: sticky; z-index: 10;">
+            <button type="button" class="icm-staff-close-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors" (click)="closeStaffAssignmentModal.emit()">Close</button>
+          </div>
+        </div>
+      </div>
+    <ng-template #transcludedContent>
+      <div class="px-6 py-6">
+        <ng-content></ng-content>
+      </div>
+    </ng-template>
+    </ng-template>
+    </div>
+  </div>
+
+  <div
+    *ngIf="timeOffTooltip as tt"
+    #timeOffTooltip
+    class="fixed z-[2100] w-80 rounded-xl border border-slate-200 bg-white p-2 shadow-lg pointer-events-none"
+    style="z-index: 2100;"
+    [style.left.px]="tt.left"
+    [style.top.px]="tt.top">
+    <div class="flex items-start gap-3 pb-1 border-b border-slate-100">
+      <div class="flex h-9 w-9 items-center justify-center rounded-full bg-sky-50 text-sky-600 shrink-0 mt-0.5">
+        <i class="bi bi-clock"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="text-sm font-semibold text-sky-700 truncate">{{ getTimeOffTypeLabel(tt.request) }}</div>
+        <div class="text-xs text-slate-500 truncate">{{ tt.request.staffName || getStaffName?.(tt.assignment.staffId) }}</div>
+      </div>
+    </div>
+
+    <div class="pt-3 grid grid-cols-2 gap-y-2 text-xs">
+      <div class="text-slate-500">Type</div>
+      <div class="text-right font-semibold text-sky-700">{{ getTimeOffTypeLabel(tt.request) }}</div>
+
+      <div class="text-slate-500">Duration</div>
+      <div class="text-right font-semibold text-slate-900">{{ getTimeOffDurationText(tt.request) }}</div>
+
+      <div class="text-slate-500">Shift Time</div>
+      <div class="text-right font-semibold text-slate-900">
+        {{ getTimeOffShiftTimeStart(tt.request, tt.assignment) | timeRange:getTimeOffShiftTimeEnd(tt.request, tt.assignment) }}
+      </div>
+
+      <div class="text-slate-500">Date</div>
+      <div class="text-right font-semibold text-slate-900">
+        {{ formatTimeOffDate(tt.request.startDate) }} - {{ formatTimeOffDate(tt.request.endDate || tt.request.startDate) }}
+      </div>
+
+      <div class="text-slate-500">Status</div>
+      <div class="text-right">
+        <span
+          class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+          [ngClass]="getTimeOffStatusClasses(tt.request)">
+          {{ getTimeOffStatusLabel(tt.request) }}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>

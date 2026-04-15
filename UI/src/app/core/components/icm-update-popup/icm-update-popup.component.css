@@ -1,0 +1,186 @@
+@keyframes zoom-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes zoom-fade-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.text-lg{
+  font-size: 0.8rem;
+}
+
+.icm-update-popup {
+  animation: zoom-fade-in 0.3s ease-out;
+}
+
+.fixed.inset-0 {
+  z-index: 9999;
+}
+
+.fixed.inset-0.is-closing .relative {
+  animation: zoom-fade-out 0.2s ease-in forwards;
+}
+
+.icm-staff-add-btn {
+  background-color: #ffffff;
+  color: #2362a3;
+  border: 1px solid #2362a3;
+}
+
+.icm-staff-add-btn:hover:not(:disabled) {
+  background-color: #2362a3;
+  color: #ffffff;
+  border-color: #2362a3;
+}
+
+.icm-staff-close-btn {
+  background-color: #ffffff;
+  color: #e7000b;
+  border: 1px solid #e7000b;
+}
+
+.icm-staff-close-btn:hover:not(:disabled) {
+  background-color: #e7000b;
+  color: #ffffff;
+  border-color: #e7000b;
+}
+
+.assign-until-picker {
+  position: relative;
+}
+
+.assign-until-picker > button {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: #0f172a;
+  min-height: 40px;
+}
+
+.assign-until-picker > button span {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assign-until-picker > button i:first-child {
+  color: #94a3b8;
+}
+
+.assign-until-calendar {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 280px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  z-index: 30;
+  padding: 0.625rem;
+}
+
+.assign-until-calendar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.assign-until-calendar__header button {
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 0.5rem;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+}
+
+.assign-until-calendar__title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.assign-until-calendar__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #64748b;
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+
+.assign-until-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+}
+
+.assign-until-calendar__grid button {
+  border: 1px solid transparent;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  padding: 0.375rem 0;
+  font-size: 0.75rem;
+  color: #0f172a;
+}
+
+.assign-until-calendar__grid button.is-outside {
+  color: #cbd5e1;
+  background: #ffffff;
+}
+
+.assign-until-calendar__grid button.is-disabled {
+  color: #cbd5e1;
+  background: #f1f5f9;
+  cursor: not-allowed;
+}
+
+.assign-until-calendar__grid button.is-selected {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.assign-until-calendar__actions {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.assign-until-calendar__actions button {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
