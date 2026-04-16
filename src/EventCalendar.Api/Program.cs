@@ -48,7 +48,7 @@ builder.Services.Configure<SchedulingClientOptions>(
 var dbConnectionString = builder.Configuration.GetConnectionString("EventCalendarDb")
     ?? "Host=localhost:5432;Database=EventCalendarService;Username=user_mnb;Password=Mnb@312455";
 
-builder.Services.AddEventCalendarInfrastructureServices(dbConnectionString);
+builder.Services.AddEventCalendarInfrastructureServices(dbConnectionString, builder.Configuration);
 builder.Services.AddEventCalendarApplicationServices();
 builder.Services.AddHealthChecks().AddNpgSql(dbConnectionString, name: "postgres", tags: ["ready"]);
 

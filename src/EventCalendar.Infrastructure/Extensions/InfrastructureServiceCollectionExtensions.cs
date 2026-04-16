@@ -4,7 +4,9 @@ using EventCalendar.Infrastructure.Clients;
 using EventCalendar.Infrastructure.Persistence;
 using EventCalendar.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SchedulingService.Grpc;
 
 namespace EventCalendar.Infrastructure.Extensions;
 
@@ -12,7 +14,8 @@ public static class InfrastructureServiceCollectionExtensions
 {
     public static IServiceCollection AddEventCalendarInfrastructureServices(
         this IServiceCollection services,
-        string connectionString)
+        string connectionString,
+        IConfiguration configuration)
     {
         services.AddDbContext<EventCalendarDbContext>(options =>
         {
@@ -21,11 +24,14 @@ public static class InfrastructureServiceCollectionExtensions
 
         services.AddScoped<IEventRepository, EventRepository>();
 
-        services.AddHttpClient<ISchedulingKernelClient, SchedulingKernelHttpClient>((sp, httpClient) =>
-        {
-            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SchedulingClientOptions>>().Value;
-            httpClient.BaseAddress = new Uri(options.BaseUrl);
-        });
+        var scheduling = configuration.GetSection(SchedulingClientOptions.SectionName).Get<SchedulingClientOptions>()
+            ?? new SchedulingClientOptions();
+        var grpcUrl = string.IsNullOrWhiteSpace(scheduling.GrpcUrl) ? scheduling.BaseUrl : scheduling.GrpcUrl;
+        if (string.IsNullOrWhiteSpace(grpcUrl))
+            throw new InvalidOperationException("SchedulingKernel BaseUrl or GrpcUrl must be configured for the scheduling gRPC client.");
+
+        services.AddSchedulesGrpcClient(options => options.Address = new Uri(grpcUrl));
+        services.AddScoped<ISchedulingKernelClient, SchedulingKernelGrpcClient>();
 
         return services;
     }
