@@ -1,12 +1,14 @@
 using Asp.Versioning;
 using EventCalendar.Application.DTOs;
 using EventCalendar.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventCalendar.Api.Controllers;
 
 [ApiController]
 [ApiVersion("1.0")]
+[Authorize]
 [Route("v{version:apiVersion}/events")]
 public class EventsController : ControllerBase
 {

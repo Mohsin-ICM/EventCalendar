@@ -30,7 +30,10 @@ public static class InfrastructureServiceCollectionExtensions
         if (string.IsNullOrWhiteSpace(grpcUrl))
             throw new InvalidOperationException("SchedulingKernel BaseUrl or GrpcUrl must be configured for the scheduling gRPC client.");
 
-        services.AddSchedulesGrpcClient(options => options.Address = new Uri(grpcUrl));
+        services.AddHttpContextAccessor();
+        services.AddTransient<BearerTokenInterceptor>();
+        services.AddSchedulesGrpcClient(options => options.Address = new Uri(grpcUrl))
+            .AddInterceptor<BearerTokenInterceptor>();
         services.AddScoped<ISchedulingKernelClient, SchedulingKernelGrpcClient>();
 
         return services;
