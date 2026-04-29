@@ -3,11 +3,11 @@
 <div class="schedule-definition">
   <form [formGroup]="form">
 
-    <!-- ── Section 1: Start / Duration / Timezone ──────────────────────── -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1.5">
-          Start Date &amp; Time <span class="text-red-500">*</span>
+    <!-- ── Schedule: Start Date/Time + Duration (inline) ───────────────── -->
+    <div class="flex flex-wrap items-end gap-3 mb-4">
+      <div class="flex-1 min-w-[200px]">
+        <label class="block text-xs font-medium text-gray-500 mb-1">
+          Schedule <span class="text-red-500">*</span>
         </label>
         <input
           type="datetime-local"
@@ -21,86 +21,230 @@
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1.5">
-          Duration (seconds) <span class="text-red-500">*</span>
-        </label>
-        <input
-          type="number"
-          formControlName="durationSeconds"
-          min="60"
-          step="300"
-          placeholder="3600"
-          class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-        <p class="mt-1 text-xs text-gray-400">
-          {{ (form.get('durationSeconds')?.value || 0) / 3600 | number:'1.0-1' }} hour(s)
-        </p>
-      </div>
-    </div>
-
-    <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-1.5">Timezone</label>
-      <select
-        formControlName="timezone"
-        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
-        <option *ngFor="let tz of timezones" [value]="tz">{{ tz }}</option>
-      </select>
-    </div>
-
-    <!-- ── Section 2: + + Repeat Until ─────────────────────────── -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1.5">
-          Frequency <span class="text-red-500">*</span>
-        </label>
-        <select
-          formControlName="frequency"
-          class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
-          <option value="none">Does not repeat</option>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-          <option value="annually">Annually</option>
-          <option value="weekdays">Every weekday (Mon to Fri)</option>
-          <option value="custom">Custom...</option>
-        </select>
-
-        <!-- Configured summary + edit button (shown whenever a label is set) -->
-        <div *ngIf="showFrequencySummary"
-             class="mt-1.5 flex items-center gap-1.5 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-2.5 py-1.5">
-          <i class="bi bi-arrow-repeat shrink-0"></i>
-          <span class="flex-1 leading-snug">{{ frequencyLabel }}<span *ngIf="customEndSummary"> · {{ customEndSummary }}</span></span>
-          <button *ngIf="showFrequencyEditButton" type="button" (click)="openEditModal()"
-                  class="ml-1 text-blue-500 hover:text-blue-700 underline whitespace-nowrap">
-            Edit
-          </button>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Duration (seconds)</label>
+        <div class="flex items-center gap-2">
+          <input
+            type="number"
+            formControlName="durationSeconds"
+            min="60"
+            step="300"
+            placeholder="3600"
+            class="w-28 px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          <span class="text-xs text-gray-400">
+            {{ (form.get('durationSeconds')?.value || 0) / 3600 | number:'1.0-1' }} hour(s)
+          </span>
         </div>
       </div>
+    </div>
 
-      <!-- Repeat Until (standard or custom-on) -->
-      <div *ngIf="showRepeatUntil">
-        <label class="block text-sm font-medium text-gray-700 mb-1.5">Repeat Until</label>
+    <!-- ── Is this recurring? ────────────────────────────────────────────── -->
+    <div class="mb-4">
+      <label class="inline-flex items-center gap-2 cursor-pointer select-none">
         <input
-          type="date"
-          formControlName="repeatUntil"
-          class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-        <p class="mt-1 text-xs text-gray-500" *ngIf="form.get('repeatUntil')?.value">
-          Until: {{ form.get('repeatUntil')?.value | date:'MM/dd/yyyy' }}
-        </p>
+          type="checkbox"
+          [checked]="isRecurring"
+          (change)="onIsRecurringChange($event)"
+          class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+        <span class="text-sm font-medium text-gray-700">Is this recurring?</span>
+      </label>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!--  Recurrence configuration (shown only when isRecurring)            -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div *ngIf="isRecurring" class="border border-gray-200 rounded-md p-4 bg-gray-50 space-y-4">
+
+      <!-- ── Repeat row ──────────────────────────────────────────────────── -->
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="text-sm font-medium text-gray-700 w-16 shrink-0">Repeat:</label>
+        <select
+          formControlName="freqUnit"
+          class="px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+          <option value="daily">Day(s)</option>
+          <option value="weekly">Week(s)</option>
+          <option value="monthly">Month(s)</option>
+          <option value="yearly">Year(s)</option>
+        </select>
+        <span class="text-sm text-gray-600">Every</span>
+        <input
+          type="number"
+          formControlName="interval"
+          min="1"
+          class="w-16 px-2 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center">
+        <span class="text-sm text-gray-600">{{ freqUnitLabel }}</span>
       </div>
 
-      <!-- Custom ends readonly badge (never / after N) -->
-      <div *ngIf="!showRepeatUntil && customEndSummary">
-        <label class="block text-sm font-medium text-gray-700 mb-1.5">Ends</label>
+      <!-- ── Weekly: weekday picker ──────────────────────────────────────── -->
+      <div *ngIf="form.get('freqUnit')?.value === 'weekly'"
+           class="flex flex-wrap items-center gap-2 pl-[72px]">
+        <app-weekday-picker
+          [selectedDays]="weekDays"
+          (selectedDaysChange)="onWeekDaysChange($event)">
+        </app-weekday-picker>
+      </div>
+
+      <!-- ── Monthly options ─────────────────────────────────────────────── -->
+      <div *ngIf="form.get('freqUnit')?.value === 'monthly'" class="space-y-3 pl-[72px]">
+
+        <!-- Radio: Arbitrary / Ordinal -->
+        <div class="flex flex-wrap gap-4">
+          <label class="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="monthlyMode"
+              value="arbitrary"
+              [checked]="monthlyMode === 'arbitrary'"
+              (change)="onMonthlyModeChange('arbitrary')"
+              class="text-blue-600">
+            <span class="text-sm text-gray-700">Pick Arbitrary Day(s)</span>
+          </label>
+          <label class="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="monthlyMode"
+              value="ordinal"
+              [checked]="monthlyMode === 'ordinal'"
+              (change)="onMonthlyModeChange('ordinal')"
+              class="text-blue-600">
+            <span class="text-sm text-gray-700">Pick Ordinally</span>
+          </label>
+        </div>
+
+        <!-- Arbitrary: 1–31 numbered buttons -->
+        <div *ngIf="monthlyMode === 'arbitrary'" class="flex flex-wrap gap-1.5 mt-2">
+          <button
+            *ngFor="let d of daysInMonthOptions"
+            type="button"
+            (click)="toggleMonthDay(d)"
+            class="w-8 h-8 text-xs rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            [class.bg-blue-600]="isMonthDaySelected(d)"
+            [class.text-white]="isMonthDaySelected(d)"
+            [class.border-blue-600]="isMonthDaySelected(d)"
+            [class.bg-white]="!isMonthDaySelected(d)"
+            [class.text-gray-700]="!isMonthDaySelected(d)"
+            [class.border-gray-300]="!isMonthDaySelected(d)">
+            {{ d }}
+          </button>
+        </div>
+
+        <!-- Ordinal: ordinal select + weekday picker -->
+        <div *ngIf="monthlyMode === 'ordinal'" class="flex flex-wrap items-center gap-2 mt-2">
+          <span class="text-sm text-gray-700">On the</span>
+          <select
+            formControlName="monthlyOrdinal"
+            class="px-2 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option *ngFor="let o of ordinalOptions" [value]="o.value">{{ o.label }}</option>
+          </select>
+          <app-weekday-picker
+            [selectedDays]="monthlyWeekdays"
+            (selectedDaysChange)="onMonthlyWeekdaysChange($event)">
+          </app-weekday-picker>
+        </div>
+
+      </div>
+
+      <!-- ── Yearly options ──────────────────────────────────────────────── -->
+      <div *ngIf="form.get('freqUnit')?.value === 'yearly'" class="space-y-3 pl-[72px]">
+
+        <!-- Month select -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-sm text-gray-700">In</span>
+          <select
+            formControlName="yearlyMonth"
+            class="px-2 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option *ngFor="let m of monthNames; let i = index" [value]="i + 1">{{ m }}</option>
+          </select>
+        </div>
+
+        <!-- Day of month -->
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="yearlyMode"
+            value="day"
+            [checked]="yearlyMode === 'day'"
+            (change)="onYearlyModeChange('day')"
+            class="text-blue-600 mt-0.5">
+          <span class="text-sm text-gray-700">Day</span>
+          <select
+            formControlName="yearlyDay"
+            [attr.disabled]="yearlyMode !== 'day' ? true : null"
+            class="px-2 py-1 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-50 disabled:text-gray-400">
+            <option *ngFor="let d of daysInMonthOptions" [value]="d">{{ d }}</option>
+          </select>
+          <span class="text-sm text-gray-500">of the month</span>
+        </label>
+
+        <!-- Ordinal weekday -->
+        <label class="flex items-start gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="yearlyMode"
+            value="ordinal"
+            [checked]="yearlyMode === 'ordinal'"
+            (change)="onYearlyModeChange('ordinal')"
+            class="text-blue-600 mt-2.5">
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="text-sm text-gray-700">The</span>
+              <select
+                formControlName="yearlyOrdinal"
+                [attr.disabled]="yearlyMode !== 'ordinal' ? true : null"
+                class="px-2 py-1 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-50 disabled:text-gray-400">
+                <option *ngFor="let o of ordinalOptions" [value]="o.value">{{ o.label }}</option>
+              </select>
+              <span class="text-sm text-gray-500">weekday(s)</span>
+            </div>
+            <div [class.opacity-40]="yearlyMode !== 'ordinal'"
+                 [class.pointer-events-none]="yearlyMode !== 'ordinal'">
+              <app-weekday-picker
+                [selectedDays]="yearlyWeekdays"
+                (selectedDaysChange)="onYearlyWeekdaysChange($event)">
+              </app-weekday-picker>
+            </div>
+          </div>
+        </label>
+
+      </div>
+
+      <!-- ── Ends ────────────────────────────────────────────────────────── -->
+      <div class="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-200">
+        <label class="text-sm font-medium text-gray-700 w-16 shrink-0">Ends:</label>
+        <select
+          formControlName="endType"
+          class="px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+          <option value="never">Never</option>
+          <option value="on">On</option>
+          <option value="after">After</option>
+        </select>
         <input
-          type="text"
-          [value]="customEndSummary"
-          readonly
-          class="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-gray-50 text-gray-500 cursor-default">
+          *ngIf="form.get('endType')?.value === 'on'"
+          type="date"
+          formControlName="endDate"
+          class="px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <ng-container *ngIf="form.get('endType')?.value === 'after'">
+          <input
+            type="number"
+            formControlName="endCount"
+            min="1"
+            class="w-20 px-2 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center">
+          <span class="text-sm text-gray-600">occurrence(s)</span>
+        </ng-container>
+      </div>
+
+    </div>
+    <!-- end recurring block -->
+
+    <!-- ── Frequency summary badge ──────────────────────────────────────── -->
+    <div *ngIf="frequencyLabel && frequencyLabel !== 'Does not repeat'" class="mt-3 mb-1">
+      <div class="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-2.5 py-1.5">
+        <i class="bi bi-arrow-repeat shrink-0"></i>
+        <span class="flex-1 leading-snug">{{ frequencyLabel }}</span>
       </div>
     </div>
 
     <!-- ── RRULE badge ──────────────────────────────────────────────────── -->
-    <div *ngIf="form.get('frequency')?.value !== 'none'" class="mb-4">
+    <div *ngIf="isRecurring && currentRRule" class="mt-2 mb-4">
       <div class="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
         <i class="bi bi-code-slash text-blue-400"></i>
         <span class="font-mono break-all">{{ currentRRule }}</span>
@@ -109,8 +253,8 @@
 
   </form>
 
-  <!-- ── Section 3: Occurrence Preview (shared component) ───────────────── -->
-  <div *ngIf="showPreview && form.get('frequency')?.value !== 'none'" class="mt-2">
+  <!-- ── Occurrence Preview ──────────────────────────────────────────────── -->
+  <div *ngIf="showPreview && isRecurring" class="mt-2">
     <app-occurrence-preview
       [rruleString]="currentRRule"
       [dtstart]="dtstartFull"
@@ -120,221 +264,4 @@
     </app-occurrence-preview>
   </div>
 
-</div>
-
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!--  Custom Recurrence Modal                                               -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<div *ngIf="showCustomRecurrenceModal()"
-     class="fixed inset-0 flex items-center justify-center overflow-y-auto px-2 py-3 sm:px-4 sm:py-6"
-     style="z-index: 3000;">
-
-  <!-- Backdrop -->
-  <div class="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-200"
-       (click)="closeCustomModal()"></div>
-
-  <div class="relative bg-white rounded-lg shadow-xl w-full mx-auto transform transition-all duration-200 max-w-sm">
-
-    <!-- Header -->
-    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-[#EFF5FF]">
-      <div class="flex items-center gap-2">
-        <i class="bi bi-arrow-repeat text-blue-500"></i>
-        <h3 class="text-base font-semibold text-gray-900">Custom Recurrence</h3>
-      </div>
-      <button type="button" (click)="closeCustomModal()"
-              class="text-gray-400 hover:text-gray-500 transition-colors p-1 -mr-1">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
-      </button>
-    </div>
-
-    <!-- Body -->
-    <div class="px-6 py-4">
-      <form [formGroup]="customForm">
-
-        <!-- Repeat every N [unit] -->
-        <div class="mb-5">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Repeat every</label>
-          <div class="flex items-center gap-2">
-            <input
-              type="number"
-              formControlName="interval"
-              min="1"
-              class="w-16 px-2 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <select
-              formControlName="freq"
-              class="flex-1 px-2 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-              <option value="day">day</option>
-              <option value="week">week</option>
-              <option value="month">month</option>
-              <option value="year">year</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- ── Weekly: day-of-week (shared weekday-picker) ─────────────── -->
-        <div class="mb-5" *ngIf="customForm.get('freq')?.value === 'week'">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Repeat on</label>
-          <app-weekday-picker
-            [selectedDays]="customWeekDays"
-            (selectedDaysChange)="customWeekDays = $event">
-          </app-weekday-picker>
-        </div>
-
-        <!-- ── Monthly: repeat on ──────────────────────────────────────── -->
-        <div class="mb-5" *ngIf="customForm.get('freq')?.value === 'month'">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Repeat on</label>
-
-          <!-- Option A: by day of month -->
-          <label class="flex items-center gap-2 cursor-pointer mb-3">
-            <input type="radio" formControlName="monthlyType" value="day" class="text-blue-600 mt-0.5">
-            <span class="text-sm text-gray-700">On day</span>
-            <select
-              formControlName="monthlyDay"
-              [attr.disabled]="customForm.get('monthlyType')?.value !== 'day' ? true : null"
-              class="px-2 py-1 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-50 disabled:text-gray-400">
-              <option *ngFor="let d of daysInMonthOptions" [value]="d">{{ d }}</option>
-            </select>
-            <span class="text-sm text-gray-500">of the month</span>
-          </label>
-
-          <!-- Option B: by ordinal + one-or-more weekdays (e.g. last Thu & Mon) -->
-          <label class="flex items-start gap-2 cursor-pointer">
-            <input type="radio" formControlName="monthlyType" value="weekday"
-                   class="text-blue-600 mt-2.5">
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="text-sm text-gray-700">On the</span>
-                <select
-                  formControlName="monthlyOrdinal"
-                  [attr.disabled]="customForm.get('monthlyType')?.value !== 'weekday' ? true : null"
-                  class="px-2 py-1 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-50 disabled:text-gray-400">
-                  <option *ngFor="let o of ordinalOptions" [value]="o.value">{{ o.label }}</option>
-                </select>
-              </div>
-              <!-- Multi-weekday pill picker (shared component) -->
-              <div [class.opacity-40]="customForm.get('monthlyType')?.value !== 'weekday'"
-                   [class.pointer-events-none]="customForm.get('monthlyType')?.value !== 'weekday'">
-                <app-weekday-picker
-                  [selectedDays]="customMonthlyWeekdays"
-                  (selectedDaysChange)="customMonthlyWeekdays = $event">
-                </app-weekday-picker>
-              </div>
-            </div>
-          </label>
-        </div>
-
-        <!-- ── Yearly: month + day / ordinal weekday ─────────────────── -->
-        <div class="mb-5" *ngIf="customForm.get('freq')?.value === 'year'">
-          <label class="block text-sm font-medium text-gray-700 mb-2">In month</label>
-          <select
-            formControlName="yearlyMonth"
-            class="w-full px-2 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white mb-3">
-            <option *ngFor="let m of monthNames; let i = index" [value]="i + 1">{{ m }}</option>
-          </select>
-
-          <label class="block text-sm font-medium text-gray-700 mb-2">On</label>
-
-          <!-- Option A: specific day of month -->
-          <label class="flex items-center gap-2 cursor-pointer mb-3">
-            <input type="radio" formControlName="yearlyType" value="day" class="text-blue-600 mt-0.5">
-            <span class="text-sm text-gray-700">Day</span>
-            <select
-              formControlName="yearlyDay"
-              [attr.disabled]="customForm.get('yearlyType')?.value !== 'day' ? true : null"
-              class="px-2 py-1 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-50 disabled:text-gray-400">
-              <option *ngFor="let d of daysInMonthOptions" [value]="d">{{ d }}</option>
-            </select>
-            <span class="text-sm text-gray-500">of the month</span>
-          </label>
-
-          <!-- Option B: ordinal + weekday(s) (e.g. last Thursday of April) -->
-          <label class="flex items-start gap-2 cursor-pointer">
-            <input type="radio" formControlName="yearlyType" value="weekday"
-                   class="text-blue-600 mt-2.5">
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="text-sm text-gray-700">The</span>
-                <select
-                  formControlName="yearlyOrdinal"
-                  [attr.disabled]="customForm.get('yearlyType')?.value !== 'weekday' ? true : null"
-                  class="px-2 py-1 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-50 disabled:text-gray-400">
-                  <option *ngFor="let o of ordinalOptions" [value]="o.value">{{ o.label }}</option>
-                </select>
-                <span class="text-sm text-gray-500">weekday(s)</span>
-              </div>
-              <div [class.opacity-40]="customForm.get('yearlyType')?.value !== 'weekday'"
-                   [class.pointer-events-none]="customForm.get('yearlyType')?.value !== 'weekday'">
-                <app-weekday-picker
-                  [selectedDays]="customYearlyWeekdays"
-                  (selectedDaysChange)="customYearlyWeekdays = $event">
-                </app-weekday-picker>
-              </div>
-            </div>
-          </label>
-        </div>
-
-        <!-- ── Ends ────────────────────────────────────────────────────── -->
-        <div class="mb-2">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Ends</label>
-          <div class="space-y-2.5">
-
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" formControlName="endType" value="never" class="text-blue-600">
-              <span class="text-sm text-gray-700">Never</span>
-            </label>
-
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" formControlName="endType" value="on" class="text-blue-600">
-              <span class="text-sm text-gray-700 mr-1">On</span>
-              <input
-                type="date"
-                formControlName="endDate"
-                [attr.disabled]="customForm.get('endType')?.value !== 'on' ? true : null"
-                class="flex-1 px-2 py-1 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400">
-            </label>
-
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" formControlName="endType" value="after" class="text-blue-600">
-              <span class="text-sm text-gray-700 mr-1">After</span>
-              <input
-                type="number"
-                formControlName="count"
-                min="1"
-                [attr.disabled]="customForm.get('endType')?.value !== 'after' ? true : null"
-                class="w-16 px-2 py-1 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400">
-              <span class="text-sm text-gray-700">occurrence(s)</span>
-            </label>
-
-          </div>
-        </div>
-
-      </form>
-    </div>
-
-    <!-- Footer -->
-    <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
-      <button
-        type="button"
-        (click)="closeCustomModal()"
-        class="px-4 py-2 text-sm font-medium rounded-md border transition-colors"
-        style="background-color:white; color:#E7000B; border-color:#E7000B"
-        onmouseover="this.style.backgroundColor='#E7000B'; this.style.color='white'"
-        onmouseout="this.style.backgroundColor='white'; this.style.color='#E7000B'">
-        Cancel
-      </button>
-      <button
-        type="button"
-        (click)="saveCustomRecurrence()"
-        class="px-4 py-2 text-sm font-medium rounded-md border transition-colors"
-        style="background-color:white; color:#2362A3; border-color:#2362A3"
-        onmouseover="this.style.backgroundColor='#2362A3'; this.style.color='white'"
-        onmouseout="this.style.backgroundColor='white'; this.style.color='#2362A3'">
-        <i class="bi bi-check-circle mr-1"></i>Done
-      </button>
-    </div>
-
-  </div>
 </div>

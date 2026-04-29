@@ -12,7 +12,7 @@ public class SchedulingClientOptions
     /// on port 5198 — that endpoint is typically HTTP/1.1-only and gRPC will fail with HTTP_1_1_REQUIRED.
     /// When null or empty, <see cref="BaseUrl"/> is used.
     /// </summary>
-    public string? GrpcUrl { get; set; } = "https://localhost:7289/";
+    public string? GrpcUrl { get; set; } = "https://scheduling-service-api.livelybeach-de2d2a5b.centralus.azurecontainerapps.io/";
     public int RetryCount { get; set; } = 3;
     public int RetryDelayMilliseconds { get; set; } = 200;
     public int TimeoutSeconds { get; set; } = 10;

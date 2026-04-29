@@ -1,3 +1,4 @@
+using System.Net.Http;
 using EventCalendar.Application.Interfaces;
 using EventCalendar.Application.Options;
 using EventCalendar.Infrastructure.Clients;
@@ -33,6 +34,10 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddTransient<BearerTokenInterceptor>();
         services.AddSchedulesGrpcClient(options => options.Address = new Uri(grpcUrl))
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                EnableMultipleHttp2Connections = true,
+            })
             .AddInterceptor<BearerTokenInterceptor>();
         services.AddScoped<ISchedulingKernelClient, SchedulingKernelGrpcClient>();
 

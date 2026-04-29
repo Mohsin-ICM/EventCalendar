@@ -1,5 +1,5 @@
 import {
-  Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, signal
+  Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -8,37 +8,7 @@ import { ScheduleDefinitionPayload } from '../../models/scheduling.models';
 import { WeekdayPickerComponent } from '../../shared/weekday-picker/weekday-picker.component';
 import { OccurrencePreviewComponent } from '../../shared/occurrence-preview/occurrence-preview.component';
 
-export type FrequencyOption =
-  'none' | 'daily' | 'weekly' | 'monthly' | 'annually' | 'weekdays' | 'custom';
-
-interface MonthlyState {
-  /** 'day'     → BYMONTHDAY=N
-   *  'weekday' → BYDAY=<ordinal>XX[,<ordinal>YY…] (e.g. -1TH,-1MO = last Thu & Mon) */
-  type: 'day' | 'weekday';
-  day: number;           // 1–31
-  ordinal: string;       // '1' | '2' | '3' | '4' | 'last'
-  weekdays: number[];    // JS indices 0-6, multiple allowed
-}
-
-/** Yearly is like monthly but also picks a calendar month (BYMONTH=N). */
-interface YearlyState {
-  month: number;         // 1–12
-  type: 'day' | 'weekday';
-  day: number;           // 1–31  (type === 'day')
-  ordinal: string;       // '1' | '2' | '3' | '4' | 'last'
-  weekdays: number[];    // JS indices 0-6 (type === 'weekday')
-}
-
-interface CustomRecurrenceState {
-  interval: number;
-  freq: 'day' | 'week' | 'month' | 'year';
-  weekDays: number[];
-  endType: 'never' | 'on' | 'after';
-  endDate: string;
-  count: number;
-  monthly: MonthlyState;
-  yearly: YearlyState;
-}
+export type FreqUnit = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 const IANA_TIMEZONES = [
   'UTC',
@@ -87,28 +57,32 @@ export class ScheduleDefinitionComponent implements OnInit, OnChanges {
     'July','August','September','October','November','December'
   ];
 
-  readonly showCustomRecurrenceModal = signal(false);
-
-  // ─── Forms ───────────────────────────────────────────────────────────────
+  // ─── Main form ───────────────────────────────────────────────────────────
   form!: FormGroup;
-  customForm!: FormGroup;
 
-  // ─── Weekday selections for custom pickers ──────────────────────────────
-  customWeekDays: number[] = [];          // weekly
-  customMonthlyWeekdays: number[] = [];   // monthly "by position"
-  customYearlyWeekdays: number[] = [];    // yearly "by position"
+  // ─── Recurrence toggle ───────────────────────────────────────────────────
+  isRecurring = false;
+
+  // ─── Weekly ──────────────────────────────────────────────────────────────
+  weekDays: number[] = [];
+
+  // ─── Monthly ─────────────────────────────────────────────────────────────
+  monthlyMode: 'arbitrary' | 'ordinal' = 'arbitrary';
+  monthlyArbitraryDays: number[] = [];   // day numbers 1–31 → BYMONTHDAY
+  monthlyWeekdays: number[] = [];        // for ordinal mode
+
+  // ─── Yearly ──────────────────────────────────────────────────────────────
+  yearlyMode: 'day' | 'ordinal' = 'day';
+  yearlyWeekdays: number[] = [];
 
   // ─── Exdate management ──────────────────────────────────────────────────
   private exdateSet = new Set<string>();
-  exdatesArray: string[] = [];     // reference-stable copy passed to preview child
+  exdatesArray: string[] = [];
 
-  // ─── Current RRULE string (kept in sync via emit()) ─────────────────────
-  currentRRule: string = '';
+  // ─── Current RRULE string ────────────────────────────────────────────────
+  currentRRule = '';
 
-  // ─── Saved custom state (null = no custom recurrence applied) ────────────
-  private customRecurrence: CustomRecurrenceState | null = null;
-
-  // ─── Echo-loop guard: last payload we emitted so ngOnChanges can skip it ─
+  // ─── Echo-loop guard ─────────────────────────────────────────────────────
   private lastEmittedPayload: ScheduleDefinitionPayload | null = null;
 
   constructor(private fb: FormBuilder) {}
@@ -118,18 +92,19 @@ export class ScheduleDefinitionComponent implements OnInit, OnChanges {
   // ─────────────────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
-    this.buildForms();
+    this.buildForm();
     if (this.value) this.patchFromValue(this.value);
-    this.subscribeFormChanges();
-    this.emit();
+    this.form.valueChanges.subscribe(() => this.emitValue());
+    this.emitValue();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['value'] && !changes['value'].firstChange && this.form) {
       const v = changes['value'].currentValue as ScheduleDefinitionPayload | null;
       if (!v) return;
-      if (this.isSamePayload(v, this.lastEmittedPayload)) return; // skip echo-back
+      if (this.isSamePayload(v, this.lastEmittedPayload)) return;
       this.patchFromValue(v);
+      this.emitValue();
     }
   }
 
@@ -137,49 +112,26 @@ export class ScheduleDefinitionComponent implements OnInit, OnChanges {
   // Form construction
   // ─────────────────────────────────────────────────────────────────────────
 
-  private buildForms(): void {
+  private buildForm(): void {
     const now = new Date();
     const dtstart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T09:00`;
 
     this.form = this.fb.group({
-      dtstart:         [dtstart,           Validators.required],
-      timezone:        [this.timezone,     Validators.required],
-      durationSeconds: [3600,              [Validators.required, Validators.min(60)]],
-      frequency:       ['none',            Validators.required],
-      repeatUntil:     ['']
-    });
-
-    this.customForm = this.fb.group({
-      interval:       [1,       [Validators.required, Validators.min(1)]],
-      freq:           ['week',  Validators.required],
-      endType:        ['never', Validators.required],
-      endDate:        [''],
-      count:          [10,      [Validators.min(1)]],
-      // Monthly sub-fields (weekdays tracked separately via customMonthlyWeekdays)
-      monthlyType:    ['day'],
-      monthlyDay:     [1],
-      monthlyOrdinal: ['1'],
-      // Yearly sub-fields (weekdays tracked separately via customYearlyWeekdays)
-      yearlyMonth:    [new Date().getMonth() + 1],
-      yearlyType:     ['day'],
-      yearlyDay:      [new Date().getDate()],
-      yearlyOrdinal:  ['1'],
-    });
-  }
-
-  private subscribeFormChanges(): void {
-    // Re-emit on every form change (recomputes RRULE, updates currentRRule)
-    this.form.valueChanges.subscribe(() => this.emit());
-
-    // Only 'custom' opens the modal. Monthly / annually build their RRULE
-    // automatically from dtstart — no modal needed.
-    this.form.get('frequency')!.valueChanges.subscribe((freq: FrequencyOption) => {
-      if (freq !== 'custom') {
-        this.customRecurrence = null;
-      } else {
-        this.syncCustomFormFromCurrent('custom');
-        this.showCustomRecurrenceModal.set(true);
-      }
+      dtstart:         [dtstart,                     Validators.required],
+      timezone:        [this.timezone,               Validators.required],
+      durationSeconds: [3600,                        [Validators.required, Validators.min(60)]],
+      // Recurrence controls
+      freqUnit:        ['daily'],
+      interval:        [1,                           [Validators.min(1)]],
+      endType:         ['never'],
+      endDate:         [''],
+      endCount:        [1,                           [Validators.min(1)]],
+      // Monthly ordinal
+      monthlyOrdinal:  ['1'],
+      // Yearly
+      yearlyMonth:     [now.getMonth() + 1],
+      yearlyDay:       [now.getDate()],
+      yearlyOrdinal:   ['1'],
     });
   }
 
@@ -193,151 +145,80 @@ export class ScheduleDefinitionComponent implements OnInit, OnChanges {
     );
     this.syncExdatesArray();
 
-    const freq = this.detectFrequency(v.rrule);
-    const until = this.extractUntil(v.rrule);
+    const rrule = v.rrule ?? '';
+    const until = this.extractUntil(rrule);
+    const count = this.extractCount(rrule);
+    const interval = this.extractInterval(rrule) ?? 1;
+
+    if (!rrule || rrule.includes('COUNT=1')) {
+      this.isRecurring = false;
+    } else {
+      this.isRecurring = true;
+    }
+
+    let freqUnit: FreqUnit = 'daily';
+    if (rrule.includes('FREQ=WEEKLY'))  freqUnit = 'weekly';
+    if (rrule.includes('FREQ=MONTHLY')) freqUnit = 'monthly';
+    if (rrule.includes('FREQ=YEARLY'))  freqUnit = 'yearly';
 
     this.form.patchValue({
       dtstart:         v.dtstart.substring(0, 16),
       timezone:        v.timezone,
       durationSeconds: v.durationSeconds ?? 3600,
-      frequency:       freq,
-      repeatUntil:     until
+      freqUnit,
+      interval,
+      endType:  until ? 'on' : (count && count > 1) ? 'after' : 'never',
+      endDate:  until ?? '',
+      endCount: count && count > 1 ? count : 1,
     }, { emitEvent: false });
 
-    this.currentRRule = v.rrule;
+    this.currentRRule = rrule;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Custom recurrence modal
+  // Template event handlers
   // ─────────────────────────────────────────────────────────────────────────
 
-  /** Re-open the modal for frequencies that require configuration. */
-  openEditModal(): void {
-    const freq = this.form.get('frequency')?.value as FrequencyOption;
-    this.syncCustomFormFromCurrent(freq);
-    this.showCustomRecurrenceModal.set(true);
+  onIsRecurringChange(event: Event): void {
+    this.isRecurring = (event.target as HTMLInputElement).checked;
+    this.emitValue();
   }
 
-  closeCustomModal(): void {
-    this.showCustomRecurrenceModal.set(false);
-    // If nothing was ever saved, revert the select back to 'none'
-    if (!this.customRecurrence) {
-      this.form.patchValue({ frequency: 'none' }, { emitEvent: false });
-      this.emit();
-    }
+  onWeekDaysChange(days: number[]): void {
+    this.weekDays = days;
+    this.emitValue();
   }
 
-  saveCustomRecurrence(): void {
-    if (this.customForm.invalid) {
-      this.customForm.markAllAsTouched();
-      return;
-    }
-    const v = this.customForm.value;
-    const saved: CustomRecurrenceState = {
-      interval:  Number(v.interval) || 1,
-      freq:      v.freq,
-      weekDays:  [...this.customWeekDays].sort((a, b) => a - b),
-      endType:   v.endType,
-      endDate:   v.endDate || '',
-      count:     Number(v.count) || 10,
-      monthly: {
-        type:     v.monthlyType || 'day',
-        day:      Number(v.monthlyDay) || 1,
-        ordinal:  v.monthlyOrdinal || '1',
-        weekdays: [...this.customMonthlyWeekdays].sort((a, b) => a - b),
-      },
-      yearly: {
-        month:    Number(v.yearlyMonth) || 1,
-        type:     v.yearlyType || 'day',
-        day:      Number(v.yearlyDay) || 1,
-        ordinal:  v.yearlyOrdinal || '1',
-        weekdays: [...this.customYearlyWeekdays].sort((a, b) => a - b),
-      },
-    };
-    this.customRecurrence = saved;
-
-    this.form.patchValue({ frequency: this.mapCustomToDisplayFreq() }, { emitEvent: false });
-    if (saved.endType === 'on') {
-      this.form.patchValue({ repeatUntil: saved.endDate }, { emitEvent: false });
-    } else {
-      this.form.patchValue({ repeatUntil: '' }, { emitEvent: false });
-    }
-
-    this.showCustomRecurrenceModal.set(false);
-    this.emit();
+  onMonthlyModeChange(mode: 'arbitrary' | 'ordinal'): void {
+    this.monthlyMode = mode;
+    this.emitValue();
   }
 
-  private mapCustomToDisplayFreq(): FrequencyOption {
-    const c = this.customRecurrence!;
-    if (c.freq === 'week' && c.interval === 1) {
-      const s = [...c.weekDays].sort((a, b) => a - b);
-      if (s.length === 5 && [1,2,3,4,5].every((d, i) => s[i] === d)) return 'weekdays';
-      return 'weekly';
-    }
-    if (c.freq === 'week')  return 'weekly';
-    if (c.freq === 'month') return 'monthly';
-    if (c.freq === 'year')  return 'annually';
-    return 'daily';
+  onMonthlyWeekdaysChange(days: number[]): void {
+    this.monthlyWeekdays = days;
+    this.emitValue();
   }
 
-  private syncCustomFormFromCurrent(triggerFreq: FrequencyOption = 'custom'): void {
-    // Map the trigger to the internal freq value used by customForm
-    const freqMap: Partial<Record<FrequencyOption, string>> = {
-      monthly:  'month',
-      annually: 'year',
-      weekly:   'week',
-      custom:   this.customRecurrence?.freq ?? 'week',
-    };
-    const defaultInternalFreq = freqMap[triggerFreq] ?? 'week';
+  onYearlyModeChange(mode: 'day' | 'ordinal'): void {
+    this.yearlyMode = mode;
+    this.emitValue();
+  }
 
-    if (this.customRecurrence) {
-      this.customWeekDays         = [...this.customRecurrence.weekDays];
-      this.customMonthlyWeekdays  = [...this.customRecurrence.monthly.weekdays];
-      this.customYearlyWeekdays   = [...this.customRecurrence.yearly.weekdays];
-      this.customForm.patchValue({
-        interval:       this.customRecurrence.interval,
-        freq:           this.customRecurrence.freq,
-        endType:        this.customRecurrence.endType,
-        endDate:        this.customRecurrence.endDate,
-        count:          this.customRecurrence.count,
-        monthlyType:    this.customRecurrence.monthly.type,
-        monthlyDay:     this.customRecurrence.monthly.day,
-        monthlyOrdinal: this.customRecurrence.monthly.ordinal,
-        yearlyMonth:    this.customRecurrence.yearly.month,
-        yearlyType:     this.customRecurrence.yearly.type,
-        yearlyDay:      this.customRecurrence.yearly.day,
-        yearlyOrdinal:  this.customRecurrence.yearly.ordinal,
-      });
-      return;
-    }
+  onYearlyWeekdaysChange(days: number[]): void {
+    this.yearlyWeekdays = days;
+    this.emitValue();
+  }
 
-    // Fresh defaults seeded from dtstart
-    const d          = this.getDtstart();
-    const wkIdx      = d?.getUTCDay() ?? 1;
-    const day        = d?.getUTCDate() ?? 1;
-    const month      = d ? d.getUTCMonth() + 1 : new Date().getMonth() + 1;
-    const ordinal    = d ? this.getWeekdayOccurrenceForDate(d) : 1;
-    const isLast     = d ? this.isLastWeekdayInMonth(d) : false;
-    const defOrdinal = isLast ? 'last' : String(ordinal);
+  toggleMonthDay(day: number): void {
+    const idx = this.monthlyArbitraryDays.indexOf(day);
+    this.monthlyArbitraryDays = idx >= 0
+      ? this.monthlyArbitraryDays.filter(d => d !== day)
+      : [...this.monthlyArbitraryDays, day].sort((a, b) => a - b);
+    this.emitValue();
+  }
 
-    this.customWeekDays        = [wkIdx];
-    this.customMonthlyWeekdays = [wkIdx];
-    this.customYearlyWeekdays  = [wkIdx];
-
-    this.customForm.patchValue({
-      interval:       1,
-      freq:           defaultInternalFreq,
-      endType:        'never',
-      endDate:        '',
-      count:          10,
-      monthlyType:    'day',
-      monthlyDay:     day,
-      monthlyOrdinal: defOrdinal,
-      yearlyMonth:    month,
-      yearlyType:     'day',
-      yearlyDay:      day,
-      yearlyOrdinal:  defOrdinal,
-    });
+  isMonthDaySelected(day: number): boolean {
+    return this.monthlyArbitraryDays.includes(day);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -351,7 +232,7 @@ export class ScheduleDefinitionComponent implements OnInit, OnChanges {
       this.exdateSet.add(isoLocal);
     }
     this.syncExdatesArray();
-    this.emit();
+    this.emitValue();
   }
 
   private syncExdatesArray(): void {
@@ -359,103 +240,58 @@ export class ScheduleDefinitionComponent implements OnInit, OnChanges {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // RRULE building — all occurrence math goes through rrule.js
+  // RRULE building
   // ─────────────────────────────────────────────────────────────────────────
 
   buildRRule(): string {
-    const freq = this.form.get('frequency')?.value as FrequencyOption;
+    if (!this.isRecurring) return 'FREQ=DAILY;COUNT=1';
 
-    if (freq === 'none') return 'FREQ=DAILY;COUNT=1';
-    // 'custom' is a transient state (modal open, nothing saved yet)
-    if (freq === 'custom' && !this.customRecurrence) return 'FREQ=DAILY;COUNT=1';
+    const v = this.form.value;
+    const freqUnit = v.freqUnit as FreqUnit;
+    const interval = Number(v.interval) || 1;
+    const opts: Partial<Options> = { interval };
 
-    // Always use the custom builder when custom recurrence state is present,
-    // regardless of the display-friendly freq label (fixes lost BYDAY details).
-    if (this.customRecurrence) return this.buildCustomRRule();
-
-    const opts: Partial<Options> = {};
-    const repeatUntil = this.form.get('repeatUntil')?.value as string;
-
-    switch (freq) {
+    switch (freqUnit) {
       case 'daily':
         opts.freq = RRule.DAILY;
         break;
-      case 'weekdays':
+
+      case 'weekly':
         opts.freq = RRule.WEEKLY;
-        opts.byweekday = [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR];
-        break;
-      case 'weekly': {
-        opts.freq = RRule.WEEKLY;
-        const d = this.getDtstart();
-        if (d) opts.byweekday = [this.jsWeekdayToRRule(d.getUTCDay())];
-        break;
-      }
-      case 'monthly': {
-        opts.freq = RRule.MONTHLY;
-        const dm = this.getDtstart();
-        if (dm) opts.bymonthday = dm.getUTCDate();
-        break;
-      }
-      case 'annually': {
-        opts.freq = RRule.YEARLY;
-        const da = this.getDtstart();
-        if (da) {
-          opts.bymonth    = da.getUTCMonth() + 1;
-          opts.bymonthday = da.getUTCDate();
+        if (this.weekDays.length > 0) {
+          opts.byweekday = this.weekDays.map(d => this.jsWeekdayToRRule(d));
         }
         break;
-      }
+
+      case 'monthly':
+        opts.freq = RRule.MONTHLY;
+        if (this.monthlyMode === 'arbitrary') {
+          if (this.monthlyArbitraryDays.length > 0) {
+            opts.bymonthday = this.monthlyArbitraryDays as any;
+          }
+        } else if (this.monthlyWeekdays.length > 0) {
+          const ordNum = v.monthlyOrdinal === 'last' ? -1 : parseInt(v.monthlyOrdinal, 10);
+          opts.byweekday = this.monthlyWeekdays.map(wd => this.jsWeekdayToRRule(wd).nth(ordNum));
+        }
+        break;
+
+      case 'yearly':
+        opts.freq = RRule.YEARLY;
+        opts.bymonth = Number(v.yearlyMonth) || 1;
+        if (this.yearlyMode === 'day') {
+          opts.bymonthday = Number(v.yearlyDay) || 1;
+        } else if (this.yearlyWeekdays.length > 0) {
+          const ordNum = v.yearlyOrdinal === 'last' ? -1 : parseInt(v.yearlyOrdinal, 10);
+          opts.byweekday = this.yearlyWeekdays.map(wd => this.jsWeekdayToRRule(wd).nth(ordNum));
+        }
+        break;
     }
 
-    if (repeatUntil) {
-      const [y, m, d] = repeatUntil.split('-').map(Number);
+    if (v.endType === 'on' && v.endDate) {
+      const [y, m, d] = (v.endDate as string).split('-').map(Number);
       opts.until = new Date(Date.UTC(y, m - 1, d, 23, 59, 59));
-    }
-
-    return new RRule(opts).toString().replace(/^RRULE:/, '');
-  }
-
-  private buildCustomRRule(): string {
-    const c = this.customRecurrence!;
-    const opts: Partial<Options> = { interval: c.interval };
-
-    switch (c.freq) {
-      case 'day':   opts.freq = RRule.DAILY;   break;
-      case 'week':  opts.freq = RRule.WEEKLY;  break;
-      case 'month': opts.freq = RRule.MONTHLY; break;
-      case 'year':  opts.freq = RRule.YEARLY;  break;
-      default:      opts.freq = RRule.WEEKLY;
-    }
-
-    if (c.freq === 'week' && c.weekDays.length > 0) {
-      opts.byweekday = c.weekDays.map(d => this.jsWeekdayToRRule(d));
-    }
-
-    if (c.freq === 'month') {
-      if (c.monthly.type === 'day') {
-        opts.bymonthday = c.monthly.day;
-      } else if (c.monthly.weekdays.length > 0) {
-        const ordinalNum = c.monthly.ordinal === 'last' ? -1 : parseInt(c.monthly.ordinal, 10);
-        opts.byweekday = c.monthly.weekdays.map(wd => this.jsWeekdayToRRule(wd).nth(ordinalNum));
-      }
-    }
-
-    if (c.freq === 'year') {
-      opts.bymonth = c.yearly.month;
-      if (c.yearly.type === 'day') {
-        opts.bymonthday = c.yearly.day;
-      } else if (c.yearly.weekdays.length > 0) {
-        // e.g. "last Thursday of April" → FREQ=YEARLY;BYMONTH=4;BYDAY=-1TH
-        const ordinalNum = c.yearly.ordinal === 'last' ? -1 : parseInt(c.yearly.ordinal, 10);
-        opts.byweekday = c.yearly.weekdays.map(wd => this.jsWeekdayToRRule(wd).nth(ordinalNum));
-      }
-    }
-
-    if (c.endType === 'on' && c.endDate) {
-      const [y, m, d] = c.endDate.split('-').map(Number);
-      opts.until = new Date(Date.UTC(y, m - 1, d, 23, 59, 59));
-    } else if (c.endType === 'after' && c.count > 0) {
-      opts.count = c.count;
+    } else if (v.endType === 'after' && Number(v.endCount) > 0) {
+      opts.count = Number(v.endCount);
     }
 
     return new RRule(opts).toString().replace(/^RRULE:/, '');
@@ -469,7 +305,7 @@ export class ScheduleDefinitionComponent implements OnInit, OnChanges {
   // Emit payload
   // ─────────────────────────────────────────────────────────────────────────
 
-  private emit(): void {
+  emitValue(): void {
     const dtstart = this.form.get('dtstart')?.value as string;
     this.currentRRule = this.buildRRule();
 
@@ -509,151 +345,75 @@ export class ScheduleDefinitionComponent implements OnInit, OnChanges {
   // Template helpers
   // ─────────────────────────────────────────────────────────────────────────
 
-  /** Full ISO local dtstart for the preview child (ensures seconds suffix) */
   get dtstartFull(): string {
     const v = this.form?.get('dtstart')?.value as string ?? '';
     return v.length === 16 ? v + ':00' : v;
   }
 
+  get freqUnitLabel(): string {
+    const labels: Record<FreqUnit, string> = {
+      daily:   'Day(s)',
+      weekly:  'Week(s)',
+      monthly: 'Month(s)',
+      yearly:  'Year(s)',
+    };
+    return labels[this.form?.get('freqUnit')?.value as FreqUnit] ?? 'Day(s)';
+  }
+
   get frequencyLabel(): string {
-    const freq = this.form?.get('frequency')?.value as FrequencyOption;
-    const c = this.customRecurrence;
+    if (!this.isRecurring) return 'Does not repeat';
+    const unit = this.form?.get('freqUnit')?.value as FreqUnit;
+    const interval = Number(this.form?.get('interval')?.value) || 1;
+    const prefix = interval === 1 ? 'Every' : `Every ${interval}`;
 
-    if (freq === 'none') return 'Does not repeat';
-    if (freq === 'weekdays') return 'Every weekday (Mon to Fri)';
-
-    if (freq === 'daily') {
-      if (c?.freq === 'day' && c.interval > 1) return `Every ${c.interval} days`;
-      return 'Daily';
-    }
-    if (freq === 'weekly') {
-      if (c?.freq === 'week') {
-        const days = c.weekDays.map(i => this.weekDayLabels[i]).join(', ');
-        const label = c.interval === 1 ? 'Every week' : `Every ${c.interval} weeks`;
-        return days ? `${label} on ${days}` : label;
+    switch (unit) {
+      case 'daily':
+        return `${prefix} day`;
+      case 'weekly': {
+        const days = this.weekDays.map(i => this.weekDayLabels[i]).join(', ');
+        return days ? `${prefix} week on ${days}` : `${prefix} week`;
       }
-      const d = this.getDtstart();
-      return d ? `Weekly on ${this.weekDayLabels[d.getUTCDay()]}` : 'Weekly';
+      case 'monthly':
+        if (this.monthlyMode === 'arbitrary' && this.monthlyArbitraryDays.length > 0) {
+          return `${prefix} month on day(s) ${this.monthlyArbitraryDays.join(', ')}`;
+        }
+        if (this.monthlyMode === 'ordinal' && this.monthlyWeekdays.length > 0) {
+          const ord = this.ordinalOptions.find(o => o.value === this.form?.get('monthlyOrdinal')?.value);
+          const days = this.monthlyWeekdays.map(i => this.weekDayLabels[i]).join(', ');
+          return `${prefix} month on the ${ord?.label ?? ''} ${days}`;
+        }
+        return `${prefix} month`;
+      case 'yearly': {
+        const month = this.monthNames[(Number(this.form?.get('yearlyMonth')?.value) || 1) - 1];
+        if (this.yearlyMode === 'day') {
+          return `${prefix} year on ${month} ${this.form?.get('yearlyDay')?.value ?? ''}`;
+        }
+        const ord = this.ordinalOptions.find(o => o.value === this.form?.get('yearlyOrdinal')?.value);
+        const days = this.yearlyWeekdays.map(i => this.weekDayLabels[i]).join(', ');
+        return `${prefix} year on the ${ord?.label ?? ''} ${days} of ${month}`;
+      }
     }
-    if (freq === 'monthly') {
-      if (c?.freq === 'month') return this.buildMonthlyLabel(c);
-      // Auto-derived from dtstart
-      const dm = this.getDtstart();
-      return dm ? `Monthly on day ${dm.getUTCDate()}` : 'Monthly';
-    }
-    if (freq === 'annually') {
-      if (c?.freq === 'year') return this.buildYearlyLabel(c);
-      // Auto-derived from dtstart
-      const da = this.getDtstart();
-      return da ? `Annually on ${this.monthNames[da.getUTCMonth()]} ${da.getUTCDate()}` : 'Annually';
-    }
-    return 'Custom';
-  }
-
-  private buildYearlyLabel(c: CustomRecurrenceState): string {
-    const prefix = c.interval === 1 ? 'Annually' : `Every ${c.interval} years`;
-    const monthName = this.monthNames[c.yearly.month - 1] ?? '';
-    if (c.yearly.type === 'day') {
-      return `${prefix} on ${monthName} ${c.yearly.day}`;
-    }
-    const ordLabel = c.yearly.ordinal === 'last'
-      ? 'last'
-      : ['', '1st', '2nd', '3rd', '4th'][parseInt(c.yearly.ordinal)] ?? c.yearly.ordinal;
-    const wdNames = c.yearly.weekdays.map(i => this.fullWeekDayNames[i]).join(', ') || '—';
-    return `${prefix} on the ${ordLabel} ${wdNames} of ${monthName}`;
-  }
-
-  private buildMonthlyLabel(c: CustomRecurrenceState): string {
-    const prefix = c.interval === 1 ? 'Monthly' : `Every ${c.interval} months`;
-    if (c.monthly.type === 'day') {
-      return `${prefix} on day ${c.monthly.day}`;
-    }
-    const ordLabel = c.monthly.ordinal === 'last'
-      ? 'last'
-      : ['', '1st', '2nd', '3rd', '4th'][parseInt(c.monthly.ordinal)] ?? c.monthly.ordinal;
-    const wdNames = c.monthly.weekdays.map(i => this.fullWeekDayNames[i]).join(', ') || '—';
-    return `${prefix} on the ${ordLabel} ${wdNames}`;
-  }
-
-  /** Show the summary badge below the frequency select. */
-  get showFrequencySummary(): boolean {
-    const freq = this.form?.get('frequency')?.value as FrequencyOption;
-    if (!freq || freq === 'none' || freq === 'daily' || freq === 'weekdays') return false;
-    return true;
-  }
-
-  /** Show the Edit button inside the summary badge (only for modal-configured freqs). */
-  get showFrequencyEditButton(): boolean {
-    const freq = this.form?.get('frequency')?.value as FrequencyOption;
-    // monthly and annually are auto-configured from dtstart — no edit needed
-    if (freq === 'monthly' || freq === 'annually') return false;
-    // weekly / custom only if custom recurrence state exists
-    return !!this.customRecurrence;
-  }
-
-  get showRepeatUntil(): boolean {
-    const freq = this.form?.get('frequency')?.value;
-    if (freq === 'none') return false;
-    return !this.customRecurrence || this.customRecurrence.endType === 'on';
-  }
-
-  get customEndSummary(): string {
-    const c = this.customRecurrence;
-    if (!c || c.endType === 'on') return '';
-    if (c.endType === 'never') return 'Never ends';
-    return `Ends after ${c.count} occurrence${c.count === 1 ? '' : 's'}`;
+    return '';
   }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Private helpers
   // ─────────────────────────────────────────────────────────────────────────
 
-  private getDtstart(): Date | null {
-    const v = this.form?.get('dtstart')?.value as string;
-    if (!v) return null;
-    const d = new Date(v + 'Z');
-    return isNaN(d.getTime()) ? null : d;
+  private extractInterval(rrule: string): number | null {
+    const m = rrule?.match(/INTERVAL=(\d+)/);
+    return m ? parseInt(m[1], 10) : null;
   }
 
-  private detectFrequency(rrule: string): FrequencyOption {
-    if (!rrule || rrule.includes('COUNT=1')) return 'none';
-    if (rrule.includes('FREQ=DAILY')) {
-      const byday = this.extractByDay(rrule);
-      if (byday.length === 5 && ['MO','TU','WE','TH','FR'].every(d => byday.includes(d))) return 'weekdays';
-      return 'daily';
-    }
-    if (rrule.includes('FREQ=WEEKLY'))  return 'weekly';
-    if (rrule.includes('FREQ=MONTHLY')) return 'monthly';
-    if (rrule.includes('FREQ=YEARLY'))  return 'annually';
-    return 'none';
-  }
-
-  private extractByDay(rrule: string): string[] {
-    const m = rrule.match(/BYDAY=([^;]+)/);
-    return m ? m[1].split(',') : [];
+  private extractCount(rrule: string): number | null {
+    const m = rrule?.match(/COUNT=(\d+)/);
+    return m ? parseInt(m[1], 10) : null;
   }
 
   private extractUntil(rrule: string): string {
-    const m = rrule.match(/UNTIL=(\d{8}T\d{6}Z?)/);
+    const m = rrule?.match(/UNTIL=(\d{8}T\d{6}Z?)/);
     if (!m) return '';
     const s = m[1];
     return `${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}`;
-  }
-
-  /** How many times has d's weekday already appeared this month (1-based) */
-  private getWeekdayOccurrenceForDate(d: Date): number {
-    let count = 0;
-    for (let day = 1; day <= d.getUTCDate(); day++) {
-      if (new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), day)).getUTCDay() === d.getUTCDay()) {
-        count++;
-      }
-    }
-    return count;
-  }
-
-  /** True if there is no later occurrence of d's weekday in the same month */
-  private isLastWeekdayInMonth(d: Date): boolean {
-    const nextWeek = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 7));
-    return nextWeek.getUTCMonth() !== d.getUTCMonth();
   }
 }
