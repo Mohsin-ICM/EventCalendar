@@ -28,6 +28,7 @@ interface EventDetailsApi {
 }
 
 interface OccurrenceApi {
+  scheduleId: number;
   eventId: string;
   eventTitle: string;
   eventColor: string;
@@ -140,6 +141,7 @@ export class EventCalendarService {
           }).pipe(
             map(res => (res.occurrences || []).map(occ => ({
               occurrenceId: `${item.id}::${occ.startUtc}`,
+              scheduleId: occ.scheduleId,
               eventId: item.id,
               eventTitle: occ.eventTitle || item.title,
               eventColor: occ.eventColor || item.color,
@@ -163,31 +165,45 @@ export class EventCalendarService {
     );
   }
 
-  skipOccurrence(eventId: string, occurrenceStart: Date): Observable<void> {
+  skipOccurrence(eventId: string, scheduleId: number, occurrenceStart: Date): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/${eventId}/occurrences/overrides`, {
+      scheduleId,
       targetOccurrenceStartUtc: occurrenceStart.toISOString(),
       action: 'Skip'
     }).pipe(map(() => undefined));
   }
 
-  moveOccurrence(eventId: string, originalStart: Date, newStart: Date, newEnd: Date): void {
-    this.http.post<void>(`${this.baseUrl}/${eventId}/occurrences/overrides`, {
-      targetOccurrenceStartUtc: originalStart.toISOString(),
-      action: 'Move',
-      movedStartUtc: newStart.toISOString(),
-      movedEndUtc: newEnd.toISOString()
-    }).subscribe();
+  moveOccurrence(
+    eventId: string,
+    scheduleId: number,
+    originalStart: Date,
+    newStart: Date,
+    newEnd: Date
+  ): void {
+    this.http
+      .post<void>(`${this.baseUrl}/${eventId}/occurrences/overrides`, {
+        scheduleId,
+        targetOccurrenceStartUtc: originalStart.toISOString(),
+        action: 'Move',
+        movedStartUtc: newStart.toISOString(),
+        movedEndUtc: newEnd.toISOString()
+      })
+      .subscribe();
   }
 
   splitSchedule(
     eventId: string,
+    scheduleId: number,
     fromDate: Date,
     newDefinition: ScheduleDefinitionPayload
   ): Observable<void> {
-    return this.http.post<void>(`${this.baseUrl}/${eventId}/schedule/split`, {
-      splitStartUtc: fromDate.toISOString(),
-      newDefinition
-    }).pipe(map(() => undefined));
+    return this.http
+      .post<void>(`${this.baseUrl}/${eventId}/schedule/split`, {
+        scheduleId,
+        splitStartUtc: fromDate.toISOString(),
+        newDefinition
+      })
+      .pipe(map(() => undefined));
   }
 
   editAllOccurrences(eventId: string, newDefinition: ScheduleDefinitionPayload): Observable<void> {

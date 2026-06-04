@@ -100,4 +100,125 @@ public class EventServiceTests
         Assert.Equal(created.Id, expanded.Occurrences[0].EventId);
         Assert.Equal("Review Session", expanded.Occurrences[0].EventTitle);
     }
+
+    [Fact]
+    public async Task ExpandOccurrencesAsync_ShouldMap_ScheduleId_FromKernel()
+    {
+        var fakeClient = new FakeSchedulingKernelClient();
+        fakeClient.Occurrences.Add(new SchedulingOccurrenceResponse
+        {
+            ScheduleId = 202,
+            ModuleType = "Event",
+            ModuleEntityId = "dummy",
+            StartUtc = DateTime.Parse("2026-04-06T10:00:00Z"),
+            EndUtc = DateTime.Parse("2026-04-06T11:00:00Z")
+        });
+
+        var provider = DependencyInjectionSetup.InitializeServiceProvider(fakeClient);
+        var service = provider.GetRequiredService<IEventService>();
+
+        var created = await service.CreateAsync(new CreateEventRequest
+        {
+            Title = "With Id",
+            Color = "#10b981",
+            Timezone = "UTC",
+            Schedule = new ScheduleDefinitionPayload
+            {
+                EvaluatorType = "Rfc5545",
+                Rrule = "FREQ=DAILY;COUNT=1",
+                Dtstart = "2026-04-06T09:00:00",
+                Timezone = "UTC",
+                DurationSeconds = 3600
+            }
+        }, CancellationToken.None);
+
+        var expanded = await service.ExpandOccurrencesAsync(created.Id, new ExpandOccurrencesRequest
+        {
+            RangeStartUtc = DateTime.Parse("2026-04-06T00:00:00Z"),
+            RangeEndUtc = DateTime.Parse("2026-04-10T00:00:00Z")
+        }, CancellationToken.None);
+
+        Assert.NotNull(expanded);
+        Assert.Equal(202, expanded!.Occurrences[0].ScheduleId);
+    }
+
+    [Fact]
+    public async Task SplitScheduleAsync_ShouldUseRequestScheduleId_WithoutCallingCreate()
+    {
+        var fakeClient = new FakeSchedulingKernelClient();
+        var provider = DependencyInjectionSetup.InitializeServiceProvider(fakeClient);
+        var service = provider.GetRequiredService<IEventService>();
+
+        var created = await service.CreateAsync(new CreateEventRequest
+        {
+            Title = "Split Test",
+            Color = "#3b82f6",
+            Timezone = "UTC",
+            Schedule = new ScheduleDefinitionPayload
+            {
+                EvaluatorType = "Rfc5545",
+                Rrule = "FREQ=DAILY;COUNT=2",
+                Dtstart = "2026-04-06T09:00:00",
+                Timezone = "UTC",
+                DurationSeconds = 3600
+            }
+        }, CancellationToken.None);
+
+        var createCountAfterEvent = fakeClient.CreateScheduleCallCount;
+        Assert.True(createCountAfterEvent >= 1);
+
+        var ok = await service.SplitScheduleAsync(created.Id, new SplitScheduleRequest
+        {
+            ScheduleId = 55,
+            SplitStartUtc = DateTime.Parse("2026-04-08T09:00:00Z"),
+            NewDefinition = new ScheduleDefinitionPayload
+            {
+                EvaluatorType = "Rfc5545",
+                Rrule = "FREQ=WEEKLY;BYDAY=MO",
+                Dtstart = "2026-04-08T09:00:00",
+                Timezone = "UTC",
+                DurationSeconds = 3600
+            }
+        }, CancellationToken.None);
+
+        Assert.True(ok);
+        Assert.Equal(55, fakeClient.LastSplitScheduleId);
+        Assert.Equal(createCountAfterEvent, fakeClient.CreateScheduleCallCount);
+    }
+
+    [Fact]
+    public async Task UpsertOverrideAsync_ShouldUseRequestScheduleId_WithoutCallingCreate()
+    {
+        var fakeClient = new FakeSchedulingKernelClient();
+        var provider = DependencyInjectionSetup.InitializeServiceProvider(fakeClient);
+        var service = provider.GetRequiredService<IEventService>();
+
+        var created = await service.CreateAsync(new CreateEventRequest
+        {
+            Title = "Override Test",
+            Color = "#3b82f6",
+            Timezone = "UTC",
+            Schedule = new ScheduleDefinitionPayload
+            {
+                EvaluatorType = "Rfc5545",
+                Rrule = "FREQ=DAILY;COUNT=2",
+                Dtstart = "2026-04-06T09:00:00",
+                Timezone = "UTC",
+                DurationSeconds = 3600
+            }
+        }, CancellationToken.None);
+
+        var createCountAfterEvent = fakeClient.CreateScheduleCallCount;
+
+        var ok = await service.UpsertOverrideAsync(created.Id, new UpsertOverrideRequest
+        {
+            ScheduleId = 88,
+            TargetOccurrenceStartUtc = DateTime.Parse("2026-04-07T09:00:00Z"),
+            Action = "Skip"
+        }, CancellationToken.None);
+
+        Assert.True(ok);
+        Assert.Equal(88, fakeClient.LastUpsertOverrideScheduleId);
+        Assert.Equal(createCountAfterEvent, fakeClient.CreateScheduleCallCount);
+    }
 }

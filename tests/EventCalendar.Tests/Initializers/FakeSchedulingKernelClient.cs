@@ -7,9 +7,13 @@ internal class FakeSchedulingKernelClient : ISchedulingKernelClient
 {
     public bool ThrowOnCreate { get; set; }
     public List<SchedulingOccurrenceResponse> Occurrences { get; } = [];
+    public int CreateScheduleCallCount { get; private set; }
+    public int? LastSplitScheduleId { get; private set; }
+    public int? LastUpsertOverrideScheduleId { get; private set; }
 
     public Task<ScheduleUpsertResponse> CreateScheduleAsync(string moduleType, string moduleEntityId, ScheduleDefinitionPayload payload, CancellationToken cancellationToken)
     {
+        CreateScheduleCallCount++;
         if (ThrowOnCreate)
             throw new InvalidOperationException("Simulated scheduling failure.");
 
@@ -53,11 +57,13 @@ internal class FakeSchedulingKernelClient : ISchedulingKernelClient
 
     public Task UpsertOverrideAsync(string moduleType, string moduleEntityId, int scheduleId, UpsertOverrideRequest request, CancellationToken cancellationToken)
     {
+        LastUpsertOverrideScheduleId = scheduleId;
         return Task.CompletedTask;
     }
 
     public Task SplitScheduleAsync(string moduleType, string moduleEntityId, int scheduleId, SplitScheduleRequest request, CancellationToken cancellationToken)
     {
+        LastSplitScheduleId = scheduleId;
         return Task.CompletedTask;
     }
 }

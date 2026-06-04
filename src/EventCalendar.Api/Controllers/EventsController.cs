@@ -81,6 +81,8 @@ public class EventsController : ControllerBase
         [FromBody] UpsertOverrideRequest request,
         CancellationToken cancellationToken)
     {
+        if (request.ScheduleId <= 0)
+            return BadRequest("A valid scheduleId is required.");
         var done = await _eventService.UpsertOverrideAsync(eventId, request, cancellationToken);
         return done ? Ok() : NotFound();
     }
@@ -91,6 +93,8 @@ public class EventsController : ControllerBase
         [FromBody] SplitScheduleRequest request,
         CancellationToken cancellationToken)
     {
+        if (request.ScheduleId <= 0)
+            return BadRequest("A valid scheduleId is required.");
         var done = await _eventService.SplitScheduleAsync(eventId, request, cancellationToken);
         return done ? Ok() : NotFound();
     }

@@ -237,13 +237,16 @@ export class EventCalendarComponent implements OnInit {
     if (!data) return;
 
     if (action.type === 'skip') {
-      this.eventCalendarService.skipOccurrence(data.event.id, data.occurrence.startsAt).subscribe({
+      this.eventCalendarService
+        .skipOccurrence(data.event.id, data.occurrence.scheduleId, data.occurrence.startsAt)
+        .subscribe({
         next: () => this.reloadOccurrences(),
         error: () => this.reloadOccurrences()
       });
     } else if (action.type === 'move') {
       this.eventCalendarService.moveOccurrence(
         data.event.id,
+        data.occurrence.scheduleId,
         data.occurrence.startsAt,
         action.newStartsAt,
         action.newEndsAt
@@ -252,6 +255,7 @@ export class EventCalendarComponent implements OnInit {
     } else if (action.type === 'split') {
       this.eventCalendarService.splitSchedule(
         data.event.id,
+        data.occurrence.scheduleId,
         action.fromDate,
         action.newDefinition
       ).subscribe({

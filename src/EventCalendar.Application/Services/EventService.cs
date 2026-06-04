@@ -169,6 +169,7 @@ public class EventService : IEventService
             NextCursor = expand.NextCursor,
             Occurrences = expand.Occurrences.Select(o => new OccurrenceResponse
             {
+                ScheduleId = o.ScheduleId,
                 EventId = calendarEvent.Id,
                 EventTitle = calendarEvent.Title,
                 EventColor = calendarEvent.Color,
@@ -189,23 +190,10 @@ public class EventService : IEventService
         if (calendarEvent is null || calendarEvent.IsDeleted)
             return false;
 
-        var schedule = await _schedulingKernelClient.GetScheduleAsync(
-            calendarEvent.ModuleType,
-            calendarEvent.ModuleEntityId,
-            cancellationToken);
-        if (schedule is null)
-            return false;
-
-        var upsertResult = await _schedulingKernelClient.CreateScheduleAsync(
-            calendarEvent.ModuleType,
-            calendarEvent.ModuleEntityId,
-            schedule,
-            cancellationToken);
-
         await _schedulingKernelClient.UpsertOverrideAsync(
             calendarEvent.ModuleType,
             calendarEvent.ModuleEntityId,
-            upsertResult.ScheduleId,
+            request.ScheduleId,
             request,
             cancellationToken);
 
@@ -223,23 +211,10 @@ public class EventService : IEventService
         if (calendarEvent is null || calendarEvent.IsDeleted)
             return false;
 
-        var schedule = await _schedulingKernelClient.GetScheduleAsync(
-            calendarEvent.ModuleType,
-            calendarEvent.ModuleEntityId,
-            cancellationToken);
-        if (schedule is null)
-            return false;
-
-        var upsertResult = await _schedulingKernelClient.CreateScheduleAsync(
-            calendarEvent.ModuleType,
-            calendarEvent.ModuleEntityId,
-            schedule,
-            cancellationToken);
-
         await _schedulingKernelClient.SplitScheduleAsync(
             calendarEvent.ModuleType,
             calendarEvent.ModuleEntityId,
-            upsertResult.ScheduleId,
+            request.ScheduleId,
             request,
             cancellationToken);
 

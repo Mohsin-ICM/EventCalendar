@@ -11,6 +11,8 @@ export interface CalendarEventEntity {
 
 export interface OccurrenceView {
   occurrenceId: string;    // `${eventId}::${startsAt.toISOString()}`
+  /** Scheduling service schedule id (from expand) — required for split and overrides. */
+  scheduleId: number;
   eventId: string;
   eventTitle: string;
   eventColor: string;

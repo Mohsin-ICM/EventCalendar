@@ -11,6 +11,7 @@ public class ExpandOccurrencesRequest
 
 public class OccurrenceResponse
 {
+    public int ScheduleId { get; set; }
     public Guid EventId { get; set; }
     public string EventTitle { get; set; } = string.Empty;
     public string EventColor { get; set; } = "#3b82f6";
@@ -28,6 +29,7 @@ public class ExpandedOccurrencesEnvelope
 
 public class UpsertOverrideRequest
 {
+    public int ScheduleId { get; set; }
     public DateTime TargetOccurrenceStartUtc { get; set; }
     public string Action { get; set; } = "Skip";
     public DateTime? MovedStartUtc { get; set; }
@@ -36,6 +38,7 @@ public class UpsertOverrideRequest
 
 public class SplitScheduleRequest
 {
+    public int ScheduleId { get; set; }
     public DateTime SplitStartUtc { get; set; }
     public ScheduleDefinitionPayload NewDefinition { get; set; } = new();
 }
